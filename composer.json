@@ -2,6 +2,11 @@
     "name": "easypaymentgateway/magento2",
     "description": "Easy Payment Gateway - Magento 2 module",
     "require": {
+      "php": "~5.5.0|~5.6.0|~7.0.0|~7.1.0|~7.2.0",
+      "magento/module-sales": "*",
+      "magento/module-quote": "*",
+      "magento/module-checkout": "*",
+      "magento/module-payment": "*",
         "guzzlehttp/guzzle": "5.*"
     },
     "type": "magento2-module",
