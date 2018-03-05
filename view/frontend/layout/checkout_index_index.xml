@@ -17,10 +17,10 @@
                                                         <item name="renders" xsi:type="array">
                                                             <!-- merge payment method renders here -->
                                                             <item name="children" xsi:type="array">
-                                                                <item name="sample_gateway" xsi:type="array">
-                                                                    <item name="component" xsi:type="string">EPG_EasyPaymentGateway/js/view/payment/sample_gateway</item>
+                                                                <item name="easy_payment_gateway" xsi:type="array">
+                                                                    <item name="component" xsi:type="string">EPG_EasyPaymentGateway/js/view/payment/easy_payment_gateway</item>
                                                                     <item name="methods" xsi:type="array">
-                                                                        <item name="sample_gateway" xsi:type="array">
+                                                                        <item name="easy_payment_gateway" xsi:type="array">
                                                                             <item name="isBillingAddressRequired" xsi:type="boolean">true</item>
                                                                         </item>
                                                                     </item>
