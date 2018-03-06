@@ -1,0 +1,114 @@
+.epg-form{
+    margin-left: 24px;    
+}
+
+.epg-form .hidden{
+    display: none;
+}
+
+.epg-form .logos{
+    padding: 12px 0 12px;
+}
+
+.epg-form .logos .epg-logo img{
+    max-width: 46px;
+    margin-left: 6px;
+    display: inline-block;
+    vertical-align: middle;    
+}
+
+.epg-form .accounts{
+    padding: 0 0 32px;
+    margin: 0;
+}
+
+.epg-form .accounts li{
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: relative;
+}
+
+.epg-form .accounts-header{
+    color: #fff;
+    text-transform: uppercase;
+    padding: 12px 12px;
+    font-weight: bold;
+    font-size: 13px;
+    background: #aaa;
+    margin-bottom: 3px !important;    
+}
+
+.epg-form .accounts .account{
+    text-align: left !important;
+    display: block !important;
+    padding: 12px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    margin-bottom: 3px !important;
+    position: relative;
+    transition: background-color 0.30s;
+}
+
+.epg-form .accounts .account:hover{
+    background-color: #f6f6f6;
+}
+
+.epg-form .accounts .account span{
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.epg-form .accounts .account .disable{
+    cursor: pointer;
+    padding: 10px 12px 0;
+    position: absolute;
+    right: 12px;
+    top: 0;
+    color: #999;
+    font-weight: bold;
+    font-size: 24px;
+    text-align: center;
+    transition: color 0.30s;
+}
+
+.epg-form .accounts .account .disable:hover{
+    color: red;
+}
+
+.epg-form .accounts .account .disable:after{
+    content: '\00D7';
+}
+
+.epg-form .accounts .account span.card-type{
+    padding: 6px 0 6px 0;
+}
+
+.epg-form .accounts .account span.card-masked:before{
+    content: '-';
+    display: inline-block;
+    vertical-align: middle;
+    padding: 0 12px;
+}
+
+.epg-form .accounts input[type=radio]{
+    position: absolute;
+    left: 12px;
+    top: 32px;
+    display: none;
+}
+
+.epg-form .accounts input[type=radio]:checked + label
+{    
+    background-color: #F8E7AA;
+}
+
+.epg-form .card-cvn input{
+    width: 120px;
+}
+
+.epg-form .sp-methods select.month,
+.epg-form .sp-methods select.year,
+.epg-form .card-expiration select{
+    max-width: 60px;
+}

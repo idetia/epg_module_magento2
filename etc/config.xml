@@ -1,26 +1,16 @@
 <?xml version="1.0"?>
-
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
-    <default>
-        <payment>
-            <easy_payment_gateway>
-                <debug>1</debug>
-                <active>1</active>
-                <model>EasyPaymentGatewayFacade</model>
-                <order_status>payment_review</order_status>
-                <transaction_type>payment</transaction_type>
-                <title>Easy Payment Gateway</title>
-                <currency>EUR</currency>
-                <can_authorize>0</can_authorize>
-                <can_capture>1</can_capture>
-                <can_void>0</can_void>
-                <can_use_checkout>1</can_use_checkout>
-                <sort_order>1</sort_order>
-                <debugReplaceKeys>MERCHANT_KEY</debugReplaceKeys>
-                <paymentInfoKeys>FRAUD_MSG_LIST</paymentInfoKeys>
-                <privateInfoKeys>FRAUD_MSG_LIST</privateInfoKeys>
-                <group>easypaymentgateway</group>
-            </easy_payment_gateway>
-        </payment>
-    </default>
+  <default>
+    <payment>
+      <easypaymentgateway>
+        <active>1</active>
+        <model>EPG\EasyPaymentGateway\Model\Paymentmethod</model>
+        <order_status>pending</order_status>
+        <title>Credit/Debit Card</title>
+        <allowspecific>0</allowspecific>
+        <payment_action>sale</payment_action>
+        <epg_sandbox>1</epg_sandbox>
+      </easypaymentgateway>
+    </payment>
+  </default>
 </config>

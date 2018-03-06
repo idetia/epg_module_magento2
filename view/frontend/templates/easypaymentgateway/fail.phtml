@@ -1,0 +1,18 @@
+<div class="epg-fail-page">
+    <h2><?php echo __('Payment Gateway') ?></h2>
+
+    <div class="alert advise">
+        <strong><?php echo __('Payment not processed:') ?></strong>
+        <br/>
+        <?php
+            $errors = \Magento\Framework\App\ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->getEpgErrors();
+            if (!empty($errors)) {
+                echo "<ul>";
+                foreach($errors as $error) {
+                    echo "<li>" . $error . "</li>";
+                }
+                echo "</ul>";
+            }
+        ?>
+    </div>
+</div>
