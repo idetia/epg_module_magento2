@@ -15,11 +15,11 @@ class Customer extends AbstractModel
      */
     protected $_modelCustomerFactory;
 
-    public function __construct(Context $context, 
-        Registry $registry, 
-        CustomerFactory $modelCustomerFactory, 
-        AbstractResource $resource = null, 
-        AbstractDb $resourceCollection = null, 
+    public function __construct(Context $context,
+        Registry $registry,
+        CustomerFactory $modelCustomerFactory,
+        AbstractResource $resource = null,
+        AbstractDb $resourceCollection = null,
         array $data = [])
     {
         $this->_modelCustomerFactory = $modelCustomerFactory;
@@ -34,14 +34,18 @@ class Customer extends AbstractModel
 
     public function loadByAttributes($attributes)
     {
-        $this->setData($this->getResource()->loadByAttributes($attributes));
+        $result = $this->getResource()->loadByAttributes($attributes);
+        if (empty($result)) {
+            return null;
+        }
+
+        $this->setData($result);
         return $this;
     }
 
     public function getCustomerAccounts($customerId)
     {
         $epgCustomer = $this->loadByAttributes(['customer_id' => $customerId]);
-
         if (empty($epgCustomer) || empty($epgCustomer->getId())) {
             return null;
         }

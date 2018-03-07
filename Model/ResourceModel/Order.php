@@ -10,10 +10,10 @@ class Order extends AbstractDb
     {
         $this->_init('easypaymentgateway_order', 'id_epg_order');
     }
-    
+
     public function loadByAttributes($attributes)
     {
-        $adapter = $this->_getReadAdapter();
+        $adapter = $this->getConnection();
         $where   = [];
         foreach ($attributes as $attributeCode=> $value) {
             $where[] = sprintf('%s=:%s', $attributeCode, $attributeCode);
@@ -25,5 +25,5 @@ class Order extends AbstractDb
         $binds = $attributes;
 
         return $adapter->fetchRow($select, $binds);
-    }    
+    }
 }

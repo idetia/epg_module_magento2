@@ -1,12 +1,3 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
-  <event name="resource_get_tablename">
-    <observer name="easypaymentgateway" instance="EPG\EasyPaymentGateway\Observer\AddAutoloader"/>
-  </event>
-  <event name="epg_checkout_order_saved">
-    <observer name="easypaymentgateway" instance="EPG\EasyPaymentGateway\Observer\InvoiceCompleteOrder"/>
-  </event>
-  <event name="checkout_onepage_controller_success_action">
-    <observer name="easypaymentgateway" instance="EPG\EasyPaymentGateway\Observer\CheckoutSuccess"/>
-  </event>
 </config>

@@ -1,0 +1,78 @@
+<div class="payment-method" data-bind="css: {'_active': (getCode() == isChecked())}">
+    <div class="payment-method-title field choice">
+        <input type="radio"
+               name="payment[method]"
+               class="radio"
+               data-bind="attr: {'id': getCode()}, value: getCode(), checked: isChecked, click: selectPaymentMethod, visible: isRadioButtonVisible()"/>
+        <label data-bind="attr: {'for': getCode()}" class="label"><span data-bind="text: getTitle()"></span></label>
+    </div>
+    <div class="payment-method-content">
+
+      <div class="epg-form">
+        <div class="block-form" data-disable-account-url="<?php echo $removeAccountUrl?>" data-confirm-disable-account="<?php echo __('Do you want disable this payment account?')?>" id="payment-form" style="padding: 20px 0;">
+
+          <div class="new-account">
+             <div class="row card-holder-name <?php if (!empty($_accounts)){ ?>hidden<?php } ?>">
+                 <label for="<?php echo $_code ?>_card_holder_name" class="required"><?php echo __('Card holder name') ?></label>
+                 <div class="input-box">
+                     <input type="text" title="<?php echo \Magento\Framework\App\ObjectManager::getInstance()->get('Magento\Framework\App\Helper\AbstractHelper')->quoteEscape(__('Card holder name')) ?>" class="input-text required-entry" id="<?php echo $_code ?>_card_holder_name" name="payment[card_holder_name]" value="<?php echo $this->escapeHtml($this->getInfoData('cc_owner')) ?>" />
+                 </div>
+             </div>
+
+             <div class="row card-number <?php if (!empty($_accounts)){ ?>hidden<?php } ?>">
+                 <label for="<?php echo $_code ?>_card_number" class="required"><?php echo __('Credit/Debit card number') ?></label>
+                 <div class="input-box">
+                     <input type="text" id="<?php echo $_code ?>_card_number" name="payment[card_number]" title="<?php echo \Magento\Framework\App\ObjectManager::getInstance()->get('Magento\Framework\App\Helper\AbstractHelper')->quoteEscape(__('Credit/Debit card number')) ?>" class="input-text validate-cc-number required-entry" value="" />
+                 </div>
+             </div>
+
+             <div class="row card-cvn">
+                 <label for="<?php echo $_code ?>_card_cvn" class="required"><?php echo __('CVN') ?></label>
+                 <div class="input-box">
+                     <input type="text" id="<?php echo $_code ?>_card_cvn" name="payment[card_cvn]" title="<?php echo \Magento\Framework\App\ObjectManager::getInstance()->get('Magento\Framework\App\Helper\AbstractHelper')->quoteEscape(__('CVN')) ?>" class="input-text validate-cvn-number required-entry" value="" />
+                 </div>
+             </div>
+
+             <div class="row card-expiration input-box <?php if (!empty($_accounts)){ ?>hidden<?php } ?>">
+                 <label for="<?php echo $_code ?>_expiration" class="required"><?php echo __('Expiration Date (MM/YY)') ?></label>
+                 <div class="input-box">
+                     <div class="v-fix">
+                         <select id="<?php echo $_code ?>_card_expiry_month" name="payment[card_expiry_month]" class="month">
+                         <?php $_ccExpMonth = $this->getInfoData('card_expiry_month') ?>
+                         <?php foreach ($this->getMonths() as $k=>$v): ?>
+                             <option value="<?php echo $v ?>"<?php if($v==$_ccExpMonth): ?> selected="selected"<?php endif ?>><?php echo $v ?></option>
+                         <?php endforeach ?>
+                         </select>
+                     </div>
+                     <div class="v-fix">
+                         <?php $_ccExpYear = $this->getInfoData('card_expiry_year') ?>
+                         <select id="<?php echo $_code ?>_card_expiry_year" name="payment[card_expiry_year]" class="year">
+                         <?php foreach ($this->getYears() as $k=>$v): ?>
+                             <option value="<?php echo $v ?>"<?php if($v==$_ccExpYear): ?> selected="selected"<?php endif ?>><?php echo $v ?></option>
+                         <?php endforeach ?>
+                         </select>
+                     </div>
+                 </div>
+             </div>
+         </div>
+
+       </div><!-- .block-form -->
+      </div>
+
+        <div class="actions-toolbar">
+            <div class="primary">
+                <button class="action primary checkout"
+                        type="submit"
+                        data-bind="
+                        click: placeOrder,
+                        attr: {title: $t('Place Order')},
+                        css: {disabled: !isPlaceOrderActionAllowed()},
+                        enable: (getCode() == isChecked())
+                        "
+                        disabled>
+                    <span data-bind="i18n: 'Place Order'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

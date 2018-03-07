@@ -14,7 +14,7 @@ class Data extends AbstractHelper
      */
     protected $_modelCustomerFactory;
 
-    public function __construct(Context $context, 
+    public function __construct(Context $context,
         CustomerFactory $modelCustomerFactory)
     {
         $this->_modelCustomerFactory = $modelCustomerFactory;
@@ -23,7 +23,7 @@ class Data extends AbstractHelper
     }
 
     public function getEpgCustomer() {
-        if (Mage::app()->isInstalled() && ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->isLoggedIn()) {
+        if (ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->isLoggedIn()) {
             return $this->_modelCustomerFactory->create()->getByCustomerId(ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->getCustomer()->getId());
         }
 
@@ -31,7 +31,7 @@ class Data extends AbstractHelper
     }
 
     public function getAccounts() {
-        if (Mage::app()->isInstalled() && ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->isLoggedIn()) {
+        if (ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->isLoggedIn()) {
             return $this->_modelCustomerFactory->create()->getCustomerAccounts(ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->getCustomer()->getId());
         }
 

@@ -1,14 +1,14 @@
 <?php
 
-namespace EPG\EasyPaymentGateway\Block\Info;
+namespace EPG\EasyPaymentGateway\Block;
 
 use EPG\EasyPaymentGateway\Helper\Data as HelperData;
 use EPG\EasyPaymentGateway\Model\OrderFactory;
 use Magento\Framework\App\ObjectManager;
 use Magento\Framework\View\Element\Template\Context;
-use Magento\Payment\Block\Info;
+use Magento\Payment\Block\Info as BlockInfo;
 
-class Easypaymentgateway extends Info
+class Info extends BlockInfo
 {
     /**
      * @var OrderFactory
@@ -20,9 +20,9 @@ class Easypaymentgateway extends Info
      */
     protected $_helperData;
 
-    public function __construct(Context $context, 
-        OrderFactory $modelOrderFactory, 
-        HelperData $helperData, 
+    public function __construct(Context $context,
+        OrderFactory $modelOrderFactory,
+        HelperData $helperData,
         array $data = [])
     {
         $this->_modelOrderFactory = $modelOrderFactory;

@@ -34,10 +34,10 @@ abstract class AbstractPayment extends Action
      */
     protected $_modelCart;
 
-    public function __construct(Context $context, 
-        CustomerFactory $modelCustomerFactory, 
-        ModelCustomerFactory $customerModelCustomerFactory, 
-        OnepageFactory $typeOnepageFactory, 
+    public function __construct(Context $context,
+        CustomerFactory $modelCustomerFactory,
+        ModelCustomerFactory $customerModelCustomerFactory,
+        OnepageFactory $typeOnepageFactory,
         Cart $modelCart)
     {
         $this->_modelCustomerFactory = $modelCustomerFactory;

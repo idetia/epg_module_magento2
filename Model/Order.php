@@ -13,7 +13,12 @@ class Order extends AbstractModel
 
     public function loadByAttributes($attributes)
     {
-        $this->setData($this->getResource()->loadByAttributes($attributes));
+        $result = $this->getResource()->loadByAttributes($attributes);
+        if (empty($result)) {
+            return null;
+        }
+
+        $this->setData($result);
         return $this;
     }
 

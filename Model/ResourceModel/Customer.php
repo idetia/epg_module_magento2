@@ -13,11 +13,12 @@ class Customer extends AbstractDb
 
     public function loadByAttributes($attributes)
     {
-        $adapter = $this->_getReadAdapter();
+        $adapter = $this->getConnection();
         $where   = [];
         foreach ($attributes as $attributeCode=> $value) {
             $where[] = sprintf('%s=:%s', $attributeCode, $attributeCode);
         }
+
         $select = $adapter->select()
             ->from($this->getMainTable())
             ->where(implode(' AND ', $where));
