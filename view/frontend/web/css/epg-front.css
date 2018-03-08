@@ -1,5 +1,5 @@
 .epg-form{
-    margin-left: 24px;    
+    margin-left: 24px;
 }
 
 .epg-form .hidden{
@@ -14,7 +14,7 @@
     max-width: 46px;
     margin-left: 6px;
     display: inline-block;
-    vertical-align: middle;    
+    vertical-align: middle;
 }
 
 .epg-form .accounts{
@@ -36,7 +36,7 @@
     font-weight: bold;
     font-size: 13px;
     background: #aaa;
-    margin-bottom: 3px !important;    
+    margin-bottom: 3px !important;
 }
 
 .epg-form .accounts .account{
@@ -99,12 +99,16 @@
 }
 
 .epg-form .accounts input[type=radio]:checked + label
-{    
+{
     background-color: #F8E7AA;
 }
 
 .epg-form .card-cvn input{
     width: 120px;
+}
+
+.epg-form .v-fix{
+  display: inline-block;
 }
 
 .epg-form .sp-methods select.month,

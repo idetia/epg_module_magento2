@@ -14,6 +14,7 @@ define(
                 component: 'EPG_EasyPaymentGateway/js/view/payment/method-renderer/easypaymentgateway'
             }
         );
+
         return Component.extend({});
     }
 );

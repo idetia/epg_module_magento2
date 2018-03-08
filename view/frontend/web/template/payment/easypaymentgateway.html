@@ -8,56 +8,103 @@
     </div>
     <div class="payment-method-content">
 
+      <!-- ko foreach: getRegion('messages') -->
+      <!-- ko template: getTemplate() --><!-- /ko -->
+      <!--/ko-->
+      <div class="payment-method-billing-address">
+          <!-- ko foreach: $parent.getRegion(getBillingAddressFormName()) -->
+          <!-- ko template: getTemplate() --><!-- /ko -->
+          <!--/ko-->
+      </div>
+
       <div class="epg-form">
-        <div class="block-form" data-disable-account-url="<?php echo $removeAccountUrl?>" data-confirm-disable-account="<?php echo __('Do you want disable this payment account?')?>" id="payment-form" style="padding: 20px 0;">
 
-          <div class="new-account">
-             <div class="row card-holder-name <?php if (!empty($_accounts)){ ?>hidden<?php } ?>">
-                 <label for="<?php echo $_code ?>_card_holder_name" class="required"><?php echo __('Card holder name') ?></label>
-                 <div class="input-box">
-                     <input type="text" title="<?php echo \Magento\Framework\App\ObjectManager::getInstance()->get('Magento\Framework\App\Helper\AbstractHelper')->quoteEscape(__('Card holder name')) ?>" class="input-text required-entry" id="<?php echo $_code ?>_card_holder_name" name="payment[card_holder_name]" value="<?php echo $this->escapeHtml($this->getInfoData('cc_owner')) ?>" />
-                 </div>
-             </div>
+        <div class="logos">
+            <span class="label" data-bind="i18n: 'Pay with'"></span>
+            <span class="epg-logo" data-bind="visible: getEpgData().allowedCards.indexOf('visa') > -1"><img data-bind="attr:{src: getEpgData().moduleImagesUrl + 'visa.png'}" /></span>
+            <span class="epg-logo" data-bind="visible: getEpgData().allowedCards.indexOf('master_card') > -1"><img data-bind="attr:{src: getEpgData().moduleImagesUrl + 'master_card.png'}" /></span>
+            <span class="epg-logo" data-bind="visible: getEpgData().allowedCards.indexOf('maestro') > -1"><img data-bind="attr:{src: getEpgData().moduleImagesUrl + 'maestro.png'}" /></span>
+            <span class="epg-logo" data-bind="visible: getEpgData().allowedCards.indexOf('american_express') > -1"><img data-bind="attr:{src: getEpgData().moduleImagesUrl + 'american_express.png'}" /></span>
+        </div>
 
-             <div class="row card-number <?php if (!empty($_accounts)){ ?>hidden<?php } ?>">
-                 <label for="<?php echo $_code ?>_card_number" class="required"><?php echo __('Credit/Debit card number') ?></label>
-                 <div class="input-box">
-                     <input type="text" id="<?php echo $_code ?>_card_number" name="payment[card_number]" title="<?php echo \Magento\Framework\App\ObjectManager::getInstance()->get('Magento\Framework\App\Helper\AbstractHelper')->quoteEscape(__('Credit/Debit card number')) ?>" class="input-text validate-cc-number required-entry" value="" />
-                 </div>
-             </div>
+        <div class="block-form" data-bind="attr: {'data-disable-account-url': getEpgData().removeAccountUrl, 'data-confirm-disable-account': $t('Do you want disable this payment account?')}" id="payment-form" style="padding: 20px 0;">
+          <form id="easypaymentgateway-form" class="form form-easypaymentgateway-order" data-role="easypaymentgateway-form">
+           <fieldset class="fieldset payment method" data-bind="attr: {id: 'payment_form_' + getCode()}">
 
-             <div class="row card-cvn">
-                 <label for="<?php echo $_code ?>_card_cvn" class="required"><?php echo __('CVN') ?></label>
-                 <div class="input-box">
-                     <input type="text" id="<?php echo $_code ?>_card_cvn" name="payment[card_cvn]" title="<?php echo \Magento\Framework\App\ObjectManager::getInstance()->get('Magento\Framework\App\Helper\AbstractHelper')->quoteEscape(__('CVN')) ?>" class="input-text validate-cvn-number required-entry" value="" />
-                 </div>
-             </div>
+          <div data-bind="visible: getEpgData().accounts != null && getEpgData().accounts.length > 0">
+              <div class="accounts-header"><span class="label" data-bind="i18n: 'Please, select a credit or debit card'"></span></div>
+              <ul class="accounts">
+                <!-- ko foreach: getEpgData().accounts -->
+                 <li afterRender="$parent._EPGInitFunctions()">
+                     <input data-bind="{attr: {id: 'account' + accountId, value: accountId }, checked: $index() == 0}" type="radio" name="payment[account]" />
+                     <label data-bind="attr: {for: 'account' + accountId, 'data-account-id': accountId }" class="account">
+                         <span class="card-type">
+                             <strong data-bind="i18n: 'Card type'"></strong> <span data-bind="text: $parent.getAccountInfo($data)['cardType']"></span>
+                         </span>
+                         <span class="card-masked">
+                             <strong data-bind="i18n: 'Card number'"></strong> <span data-bind="text: $parent.getAccountInfo($data)['maskedCardNumber']"></span>
+                         </span>
+                         <span class="disable"></span>
+                     </label>
+                 </li>
+                 <!-- /ko -->
 
-             <div class="row card-expiration input-box <?php if (!empty($_accounts)){ ?>hidden<?php } ?>">
-                 <label for="<?php echo $_code ?>_expiration" class="required"><?php echo __('Expiration Date (MM/YY)') ?></label>
-                 <div class="input-box">
-                     <div class="v-fix">
-                         <select id="<?php echo $_code ?>_card_expiry_month" name="payment[card_expiry_month]" class="month">
-                         <?php $_ccExpMonth = $this->getInfoData('card_expiry_month') ?>
-                         <?php foreach ($this->getMonths() as $k=>$v): ?>
-                             <option value="<?php echo $v ?>"<?php if($v==$_ccExpMonth): ?> selected="selected"<?php endif ?>><?php echo $v ?></option>
-                         <?php endforeach ?>
-                         </select>
-                     </div>
-                     <div class="v-fix">
-                         <?php $_ccExpYear = $this->getInfoData('card_expiry_year') ?>
-                         <select id="<?php echo $_code ?>_card_expiry_year" name="payment[card_expiry_year]" class="year">
-                         <?php foreach ($this->getYears() as $k=>$v): ?>
-                             <option value="<?php echo $v ?>"<?php if($v==$_ccExpYear): ?> selected="selected"<?php endif ?>><?php echo $v ?></option>
-                         <?php endforeach ?>
-                         </select>
-                     </div>
-                 </div>
-             </div>
+                 <li>
+                     <input id="account0" type="radio" name="payment[account]" value="0" />
+                     <label for="account0" class="account new-card" data-account-id="">
+                         <span class="card-type">
+                             <strong><span class="label" data-bind="i18n: 'New card'"></span></strong>
+                         </span>
+                     </label>
+                 </li>
+              </ul>
          </div>
 
-       </div><!-- .block-form -->
-      </div>
+             <div class="field card-holder-name required" data-bind="css: {hidden: getEpgData().accounts != null && getEpgData().accounts.length > 0}">
+                 <label data-bind="{attr: {for: getCode() + '_card_holder_name'}, i18n: 'Card holder name'}" class="label"></label>
+                 <div class="input-box">
+                     <input type="text" data-bind="attr: {title: $t('Card holder name'), id: getCode() + '_card_holder_name', value: ''}" class="input-text required-entry" name="payment[card_holder_name]" />
+                 </div>
+             </div>
+
+             <div class="field card-number required" data-bind="css: {hidden: getEpgData().accounts != null && getEpgData().accounts.length > 0}">
+                 <label data-bind="{attr: {for: getCode() + '_card_number'}, i18n: 'Credit/Debit card number'}" class="label"></label>
+                 <div class="input-box">
+                     <input type="text" data-bind="attr: {title: $t('Credit/Debit card number'), id: getCode() + '_card_number', value: ''}" class="input-text validate-cc-number required-entry" name="payment[card_number]" />
+                 </div>
+             </div>
+
+             <div class="field card-cvn required">
+                 <label data-bind="{attr: {for: getCode() + '_card_cvn'}, i18n: 'CVN'}" class="label"></label>
+                 <div class="input-box">
+                     <input type="text" data-bind="attr: {title: $t('CVN'), id: getCode() + '_card_cvn', value: ''}" name="payment[card_cvn]" class="input-text validate-cvn-number required-entry" />
+                 </div>
+             </div>
+
+             <div class="field card-expiration input-box required" data-bind="css: {hidden: getEpgData().accounts != null && getEpgData().accounts.length > 0}">
+                 <label data-bind="{attr: {for: getCode() + '_expiration'}, i18n: 'Expiration Date (MM/YY)'}" class="label"></label>
+                 <div class="input-box">
+                     <div class="v-fix">
+                         <select data-bind="{attr: {id: getCode() + '_card_expiry_month'}}" name="payment[card_expiry_month]" class="month">
+                           <!-- ko foreach: getEpgData().months -->
+                             <option data-bind="{attr: {value: $data}, text: $data}"></option>
+                           <!-- /ko -->
+                         </select>
+                     </div>
+                     <div class="v-fix">
+                       <select data-bind="{attr: {id: getCode() + '_card_expiry_year'}}" name="payment[card_expiry_year]" class="year">
+                         <!-- ko foreach: getEpgData().years -->
+                           <option data-bind="{attr: {value: $data}, text: $data}"></option>
+                         <!-- /ko -->
+                       </select>
+                     </div>
+                 </div>
+             </div>
+
+        </fieldset>
+       </form>
+      </div><!-- .block-form -->
+     </div><!-- .epg-form -->
 
         <div class="actions-toolbar">
             <div class="primary">
@@ -70,7 +117,7 @@
                         enable: (getCode() == isChecked())
                         "
                         disabled>
-                    <span data-bind="i18n: 'Place Order'"></span>
+                    <span data-bind="text: $t('Place Order')"></span>
                 </button>
             </div>
         </div>

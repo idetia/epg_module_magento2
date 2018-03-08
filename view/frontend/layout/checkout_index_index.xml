@@ -1,19 +1,8 @@
 <?xml version="1.0"?>
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
-  <!--
   <head>
-    <action method="addItem">
-      <type>skin_js</type>
-      <name>easypaymentgateway/js/epg-front.js</name>
-      <params/>
-    </action>
-    <action method="addItem">
-      <type>skin_css</type>
-      <name>easypaymentgateway/css/epg-front.css</name>
-      <params/>
-    </action>
+    <css src="EPG_EasyPaymentGateway::css/epg-front.css"/>
   </head>
--->
   <body>
       <referenceBlock name="checkout.root">
           <arguments>
@@ -25,6 +14,7 @@
                                   <item name="children" xsi:type="array">
                                       <item name="billing-step" xsi:type="array">
                                           <item name="component" xsi:type="string">uiComponent</item>
+                                          <item name="sortOrder" xsi:type="string">1</item>
                                           <item name="children" xsi:type="array">
                                               <item name="payment" xsi:type="array">
                                                   <item name="children" xsi:type="array">
@@ -35,7 +25,7 @@
                                                                   <item name="component" xsi:type="string">EPG_EasyPaymentGateway/js/view/payment/method-renderer</item>
                                                                   <item name="methods" xsi:type="array">
                                                                       <item name="easypaymentgateway" xsi:type="array">
-                                                                          <item name="isBillingAddressRequired" xsi:type="boolean">false</item>
+                                                                          <item name="isBillingAddressRequired" xsi:type="boolean">true</item>
                                                                       </item>
                                                                   </item>
                                                               </item>

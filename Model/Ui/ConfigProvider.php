@@ -70,7 +70,7 @@ final class ConfigProvider implements ConfigProviderInterface
         return [
             'payment' => [
                 self::CODE => [
-                    'allowedCards' => $this->_configScopeConfigInterface->getValue('payment/easypaymentgateway/epg_channels', ScopeInterface::SCOPE_STORE),
+                    'allowedCards' => explode(',', $this->_configScopeConfigInterface->getValue('payment/easypaymentgateway/epg_channels', ScopeInterface::SCOPE_STORE)),
                     'isSandbox' => $isSandbox,
                     'isSSL' => $isSSL,
                     'moduleImagesUrl' => $this->_assetRepo->getUrl('EPG_EasyPaymentGateway::images') . '/',
