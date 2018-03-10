@@ -1,10 +1,9 @@
 <?php
 
-use GuzzleHttp\Client as HttpClient;
-use GuzzleHttp\Exception\RequestException;
-
 namespace EPG\EasyPaymentGateway\Model;
 
+use GuzzleHttp\Client as HttpClient;
+use GuzzleHttp\Exception\RequestException;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Store\Model\ScopeInterface;
 use Magento\Store\Model\StoreManagerInterface;
@@ -21,7 +20,7 @@ class Api
      */
     protected $_modelStoreManagerInterface;
 
-    public function __construct(ScopeConfigInterface $configScopeConfigInterface, 
+    public function __construct(ScopeConfigInterface $configScopeConfigInterface,
         StoreManagerInterface $modelStoreManagerInterface)
     {
         $this->_configScopeConfigInterface = $configScopeConfigInterface;

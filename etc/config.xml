@@ -4,7 +4,7 @@
     <payment>
       <easypaymentgateway>
         <active>1</active>
-        <model>EPGPaymentFacade</model>
+        <model>EPG\EasyPaymentGateway\Model\Paymentmethod</model>
         <order_status>processing</order_status>
         <title>Credit/Debit Card</title>
         <is_gateway>1</is_gateway>

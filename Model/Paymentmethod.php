@@ -60,56 +60,59 @@ class Paymentmethod extends AbstractMethod {
 
   protected $errors = [];
 
-  public function assignData(\Magento\Framework\DataObject $data)
-  {
-    $info = $this->getInfoInstance();
-
-    if ($data->getAccount())
-    {
-      $info->setAccount($data->getAccount());
-    }
-
-    if ($data->getCardNumber())
-    {
-      $info->setCardNumber($data->getCardNumber());
-    }
-
-    if ($data->getCardHolderName())
-    {
-      $info->setCardHolderName($data->getCardHolderName());
-    }
-
-    if ($data->getCardCvn())
-    {
-      $info->setCardCvn($data->getCardCvn());
-    }
-
-    if ($data->getCardExpiryMonth())
-    {
-      $info->setCardExpiryMonth($data->getCardExpiryMonth());
-    }
-
-    if ($data->getCardExpiryYear())
-    {
-      $info->setCardExpiryYear($data->getCardExpiryYear());
-    }
-
-    parent::assignData($data);
-
-    return $this;
-  }
-
   public function capture(\Magento\Payment\Model\InfoInterface $payment, $amount)
   {
-      parent::capture();
+      parent::capture($payment, $amount);
 
+      throw new \Magento\Framework\Validator\Exception(__('Payment error.'));
+
+      /*
+      // See https://magecomp.com/blog/create-custom-payment-method-in-magento-2/
+      // See https://github.com/checkout/checkout-magento2-plugin
+      // See https://github.com/magento/magento2/blob/2.1.3/app/code/Magento/Payment/Model/Method/AbstractMethod.php
+      
       $order = $payment->getOrder();
       $billing = $order->getBillingAddress();
-      throw new \Magento\Framework\Validator\Exception(__('Payment capturing error.'));
+      try{
+          $charge = \Stripe\Charge::create(array(
+              'amount'	=> $amount*100,
+              'currency'	=> strtolower($order->getBaseCurrencyCode()),
+              'card'      => array(
+                  'number'			=>	$payment->getCcNumber(),
+                  'exp_month'			=>	sprintf('%02d',$payment->getCcExpMonth()),
+                  'exp_year'			=>	$payment->getCcExpYear(),
+                  'cvc'				=>	$payment->getCcCid(),
+                  'name'				=>	$billing->getName(),
+                  'address_line1'		=>	$billing->getStreet(1),
+                  'address_line2'		=>	$billing->getStreet(2),
+                  'address_zip'		=>	$billing->getPostcode(),
+                  'address_state'		=>	$billing->getRegion(),
+                  'address_country'	=>	$billing->getCountry(),
+              ),
+              'description'	=>	sprintf('#%s, %s', $order->getIncrementId(), $order->getCustomerEmail())
+          ));
+
+          $payment->setTransactionId($charge->id)->setIsTransactionClosed(0);
+
+          return $this;
+
+      } catch (\Exception $e) {
+          $this->debugData(['exception' => $e->getMessage()]);
+          throw new \Magento\Framework\Validator\Exception(__('Payment error.'));
+      }
+      */
+
    }
 
   public function validate()
   {
+      parent::validate();
+
+      // Check if payment method is valid
+      if (!$this->isAvailable()) {
+          throw new \Magento\Framework\Validator\Exception(__('This payment method is not available.'));
+      }
+
       $paymentInfo = $this->getInfoInstance();
       if ($paymentInfo instanceof Payment) {
           $billingCountry = $paymentInfo->getOrder()->getBillingAddress()->getCountryId();
@@ -118,11 +121,12 @@ class Paymentmethod extends AbstractMethod {
       }
 
       // Check form fields
+      $data = $paymentInfo->getAdditionalInformation();
       if (empty($data['account']) || $data['account'] == "0") {
-          $cardNumber = $data['card_number'];
-          $expDateMonth = $data['card_expiry_month'];
-          $expDateYear = $data['card_expiry_year'];
-          $chName = $data['card_holder_name'];
+          $cardNumber = isset($data['card_number'])?(string)$data['card_number']:null;
+          $expDateMonth = isset($data['card_expiry_month'])?(int)$data['card_expiry_month']:null;
+          $expDateYear = isset($data['card_expiry_year'])?(int)$data['card_expiry_year']:null;
+          $chName = isset($data['card_holder_name'])?(string)$data['card_holder_name']:null;
 
           if (empty($cardNumber) || empty(self::checkCard($cardNumber, true))) {
               $this->errors[] = __('The card number is not valid.');
@@ -137,23 +141,50 @@ class Paymentmethod extends AbstractMethod {
           }
       }
 
-      $cvnNumber = $data['card_cvn'];
-      if (empty($cvnNumber) || strlen($cvnNumber) !== 3) {
+      $cvnNumber = isset($data['card_cvn'])?$data['card_cvn']:null;;
+      if (empty($cvnNumber) || strlen($cvnNumber) !== 3 || !is_numeric($cvnNumber)) {
           $this->errors[] = __('The card cvn number is not valid.');
       }
 
       if (count($this->errors) > 0) {
-        throw new \Exception(implode("\n", $this->errors));
+        throw new \Magento\Framework\Validator\Exception(__(implode("\n", $this->errors)));
       }
 
-    parent::validate();
-
-    // Check if payment method is valid
-    if (!$this->isAvailable()) {
-        throw new \Magento\Framework\Validator\Exception(__('This payment method is not available.'));
-    }
-
     return $this;
+  }
+
+  private static final function checkCard($number, $extraCheck = false){
+      $cards = array(
+          "visa" => "(4\d{12}(?:\d{3})?)",
+          "amex" => "(3[47]\d{13})",
+          "maestro" => "((?:5020|5038|6304|6579|6761)\d{12}(?:\d\d)?)",
+          "mastercard" => "(5[1-5]\d{14})"
+      );
+
+      $names = array("Visa", "American Express", "Maestro", "Mastercard");
+      $matches = array();
+      $pattern = "#^(?:".implode("|", $cards).")$#";
+      $result = preg_match($pattern, str_replace(" ", "", $number), $matches);
+
+      if($extraCheck && $result > 0){
+          $result = (self::luhnValidation($number))?1:0;
+      }
+
+      return ($result>0)?$names[sizeof($matches)-2]:false;
+  }
+
+  private static final function luhnValidation($number){
+      settype($number, 'string');
+      $number = preg_replace("/[^0-9]/", "", $number);
+      $numberChecksum= '';
+
+      $reversedNumberArray = str_split(strrev($number));
+      foreach ($reversedNumberArray as $i => $d) {
+          $numberChecksum.= (($i % 2) !== 0) ? (string)((int)$d * 2) : $d;
+      }
+
+      $sum = array_sum(str_split($numberChecksum));
+      return ($sum % 10) === 0;
   }
 
   public function getOrderPlaceRedirectUrl() {

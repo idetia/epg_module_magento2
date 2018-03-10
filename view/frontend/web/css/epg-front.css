@@ -111,6 +111,13 @@
   display: inline-block;
 }
 
+.epg-form .epg-billing-address{
+  padding: 12px 0 0;
+  margin: 12px 0;
+  border-top: 1px solid rgba(100,100,100,0.2);
+  border-bottom: 1px solid rgba(100,100,100,0.2);
+}
+
 .epg-form .sp-methods select.month,
 .epg-form .sp-methods select.year,
 .epg-form .card-expiration select{

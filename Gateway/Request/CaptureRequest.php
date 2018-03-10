@@ -34,6 +34,8 @@ class CaptureRequest implements BuilderInterface
      */
     public function build(array $buildSubject)
     {
+        throw new \Exception('CaptureRequest');
+
         if (!isset($buildSubject['payment'])
             || !$buildSubject['payment'] instanceof PaymentDataObjectInterface
         ) {
@@ -44,20 +46,11 @@ class CaptureRequest implements BuilderInterface
         $paymentDO = $buildSubject['payment'];
 
         $order = $paymentDO->getOrder();
-
         $payment = $paymentDO->getPayment();
 
         if (!$payment instanceof OrderPaymentInterface) {
             throw new \LogicException('Order payment should be provided.');
         }
 
-        return [
-            'TXN_TYPE' => 'S',
-            'TXN_ID' => $payment->getLastTransId(),
-            'MERCHANT_KEY' => $this->config->getValue(
-                'merchant_gateway_key',
-                $order->getStoreId()
-            )
-        ];
     }
 }

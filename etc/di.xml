@@ -3,7 +3,7 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
     <virtualType name="EPGPaymentFacade" type="Magento\Payment\Model\Method\Adapter">
         <arguments>
-            <argument name="code" xsi:type="const">\EPG\EasyPaymentGateway\Model\Ui\ConfigProvider::CODE</argument>
+            <argument name="code" xsi:type="const">EPG\EasyPaymentGateway\Model\Ui\ConfigProvider::CODE</argument>
             <argument name="formBlockType" xsi:type="string">EPG\EasyPaymentGateway\Block\Form</argument>
             <argument name="infoBlockType" xsi:type="string">EPG\EasyPaymentGateway\Block\Info</argument>
             <argument name="valueHandlerPool" xsi:type="object">EPGPaymentValueHandlerPool</argument>
@@ -11,24 +11,6 @@
             <argument name="commandPool" xsi:type="object">EPGPaymentCommandPool</argument>
         </arguments>
     </virtualType>
-
-    <virtualType name="EPGPaymentGatewayConfig" type="Magento\Payment\Gateway\Config\Config">
-        <arguments>
-            <argument name="methodCode" xsi:type="const">\EPG\EasyPaymentGateway\Model\Ui\ConfigProvider::CODE</argument>
-        </arguments>
-    </virtualType>
-
-    <virtualType name="EPGPaymentGatewayLogger" type="Magento\Payment\Model\Method\Logger">
-        <arguments>
-            <argument name="config" xsi:type="object">EPGPaymentGatewayConfig</argument>
-        </arguments>
-    </virtualType>
-
-    <type name="EPG\EasyPaymentGateway\Gateway\Http\Client\Client">
-        <arguments>
-            <argument name="logger" xsi:type="object">EPGPaymentGatewayLogger</argument>
-        </arguments>
-    </type>
 
     <virtualType name="EPGPaymentValueHandlerPool" type="Magento\Payment\Gateway\Config\ValueHandlerPool">
         <arguments>
@@ -40,13 +22,7 @@
 
     <virtualType name="EPGPaymentConfigValueHandler" type="Magento\Payment\Gateway\Config\ConfigValueHandler">
         <arguments>
-            <argument name="configInterface" xsi:type="object">EPGPaymentConfigValueHandler</argument>
-        </arguments>
-    </virtualType>
-
-    <virtualType name="EPGPaymentConfigValueHandler" type="Magento\Payment\Gateway\Config\ConfigValueHandler">
-        <arguments>
-            <argument name="configInterface" xsi:type="object">EPGPaymentGatewayConfig</argument>
+            <argument name="configInterface" xsi:type="object">EPG\EasyPaymentGateway\Gateway\Config\Config</argument>
         </arguments>
     </virtualType>
 
@@ -66,23 +42,11 @@
         </arguments>
     </virtualType>
 
-    <type name="EPG\EasyPaymentGateway\Gateway\Request\CaptureRequest">
-        <arguments>
-            <argument name="config" xsi:type="object">EPGPaymentGatewayConfig</argument>
-        </arguments>
-    </type>
-
     <virtualType name="EPGPaymentCaptureCommand" type="Magento\Payment\Gateway\Command\GatewayCommand">
         <arguments>
-            <argument name="requestBuilder" xsi:type="object">EPG\EasyPaymentGateway\Gateway\Request\CaptureRequest</argument>
-            <argument name="transferFactory" xsi:type="object">EPG\EasyPaymentGateway\Gateway\Http\TransferFactory</argument>
-            <argument name="client" xsi:type="object">EPG\EasyPaymentGateway\Gateway\Http\Client\Client</argument>
+            <argument name="requestBuilder" xsi:type="object">Magento\Payment\Gateway\Request\BuilderComposite</argument>
+            <argument name="transferFactory" xsi:type="object">Magento\Braintree\Gateway\Http\TransferFactory</argument>
+            <argument name="client" xsi:type="object">Magento\Payment\Gateway\Http\Client</argument>
         </arguments>
     </virtualType>
-
-    <type name="EPG\EasyPaymentGateway\Gateway\Request\CaptureRequest">
-        <arguments>
-            <argument name="config" xsi:type="object">EPGPaymentGatewayConfig</argument>
-        </arguments>
-    </type>
 </config>

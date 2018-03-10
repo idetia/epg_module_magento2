@@ -41,6 +41,8 @@ class Client implements ClientInterface
      */
     public function placeRequest(TransferInterface $transferObject)
     {
+        throw new \Exception('Client');
+
         $response = $this->generateResponseForCode(
             $this->getResultCode(
                 $transferObject

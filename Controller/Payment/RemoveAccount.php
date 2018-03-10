@@ -35,14 +35,14 @@ class RemoveAccount extends AbstractPayment
      */
     protected $_configScopeConfigInterface;
 
-    public function __construct(Context $context, 
-        CustomerFactory $modelCustomerFactory, 
-        ModelCustomerFactory $customerModelCustomerFactory, 
-        OnepageFactory $typeOnepageFactory, 
-        Cart $modelCart, 
-        ApiFactory $modelApiFactory, 
-        HelperData $helperData, 
-        StoreManagerInterface $modelStoreManagerInterface, 
+    public function __construct(Context $context,
+        CustomerFactory $modelCustomerFactory,
+        ModelCustomerFactory $customerModelCustomerFactory,
+        OnepageFactory $typeOnepageFactory,
+        Cart $modelCart,
+        ApiFactory $modelApiFactory,
+        HelperData $helperData,
+        StoreManagerInterface $modelStoreManagerInterface,
         ScopeConfigInterface $configScopeConfigInterface)
     {
         $this->_modelApiFactory = $modelApiFactory;

@@ -2,21 +2,97 @@ define(
     [
         'Magento_Checkout/js/view/payment/default',
         'mage/translate',
-        'Magento_Checkout/js/action/place-order',
-        'Magento_Checkout/js/model/full-screen-loader',
-        'Magento_Checkout/js/model/payment/additional-validators',
-        'Magento_Payment/js/model/credit-card-validation/validator'        
+        'EPG_EasyPaymentGateway/js/model/credit-card-data'
     ],
-    function (Component, $t) {
+    function (Component, $t, creditCardData) {
         'use strict';
 
         return Component.extend({
             defaults: {
-                template: 'EPG_EasyPaymentGateway/payment/easypaymentgateway'
+                template: 'EPG_EasyPaymentGateway/payment/easypaymentgateway',
+                creditCardAccount: '',
+                creditCardHoldName: '',
+                creditCardNumber: '',
+                creditCardCvn: '',
+                creditCardExpMonth: '',
+                creditCardExpYear: '',
+            },
+
+            /** @inheritdoc */
+            initObservable: function () {
+                this._super()
+                    .observe([
+                        'creditCardAccount',
+                        'creditCardHoldName',
+                        'creditCardNumber',
+                        'creditCardCvn',
+                        'creditCardExpMonth',
+                        'creditCardExpYear'
+                    ]);
+
+                return this;
+            },
+
+            /**
+             * Init component
+             */
+            initialize: function () {
+                var self = this;
+
+                this._super();
+
+                creditCardData.expMonth = this.getEpgData().months[0];
+                creditCardData.expYear = this.getEpgData().years[0];
+
+                this.creditCardAccount.subscribe(function (value) {
+                    creditCardData.account = value;
+                });
+
+                this.creditCardHoldName.subscribe(function (value) {
+                    creditCardData.holdName = value;
+                });
+
+                this.creditCardNumber.subscribe(function (value) {
+                    creditCardData.cardNumber = value;
+                });
+
+                this.creditCardCvn.subscribe(function (value) {
+                    creditCardData.cardCvn = value;
+                });
+
+                this.creditCardExpMonth.subscribe(function (value) {
+                    creditCardData.expMonth = value;
+                });
+
+                this.creditCardExpYear.subscribe(function (value) {
+                    creditCardData.expYear = value;
+                });
+            },
+
+            /**
+             * Get data
+             * @returns {Object}
+             */
+            getData: function () {
+                return {
+                    'method': this.item.method,
+                    'additional_data': {
+                        'account': creditCardData.account,
+                        'card_holder_name': creditCardData.holdName,
+                        'card_number': creditCardData.cardNumber,
+                        'card_cvn': creditCardData.cardCvn,
+                        'card_expiry_month': creditCardData.expMonth,
+                        'card_expiry_year': creditCardData.expYear,
+                    }
+                };
             },
 
             getCode: function() {
                 return 'easypaymentgateway';
+            },
+
+            isActive: function() {
+                return true;
             },
 
             getEpgData: function() {
@@ -78,6 +154,10 @@ define(
                 radios.each(function(i, el){
                     var item = jQuery(el);
 
+                    if (initial && i == 0) {
+                      item.prop('checked', true);
+                    }
+
                     if (item.attr('value') == 0 && item.is(':checked')) {
                         jQuery('.epg-form .field.card-holder-name, .epg-form .field.card-number, .epg-form .field.card-expiration').removeClass('hidden');
                         jQuery('.epg-form .field.card-holder-name input, .epg-form .field.card-number input, .epg-form .field.card-expiration select').addClass('required-entry');
@@ -86,9 +166,10 @@ define(
                         jQuery('.epg-form .field.card-holder-name input, .epg-form .field.card-number input, .epg-form .field.card-expiration select').removeClass('required-entry');
                     }
 
-                    if (initial && i == 0) {
-                      item.prop('checked', true);
+                    if (item.is(':checked')) {
+                      creditCardData.account = item.attr('value');
                     }
+
                 });
             },
 

@@ -31,6 +31,8 @@ class TransferFactory implements TransferFactoryInterface
      */
     public function create(array $request)
     {
+        throw new \Exception('TransferFactory');
+
         return $this->transferBuilder
             ->setBody($request)
             ->setMethod('POST')

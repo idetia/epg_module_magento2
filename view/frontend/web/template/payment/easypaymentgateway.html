@@ -8,15 +8,6 @@
     </div>
     <div class="payment-method-content">
 
-      <!-- ko foreach: getRegion('messages') -->
-      <!-- ko template: getTemplate() --><!-- /ko -->
-      <!--/ko-->
-      <div class="payment-method-billing-address">
-          <!-- ko foreach: $parent.getRegion(getBillingAddressFormName()) -->
-          <!-- ko template: getTemplate() --><!-- /ko -->
-          <!--/ko-->
-      </div>
-
       <div class="epg-form">
 
         <div class="logos">
@@ -28,7 +19,7 @@
         </div>
 
         <div class="block-form" data-bind="attr: {'data-disable-account-url': getEpgData().removeAccountUrl, 'data-confirm-disable-account': $t('Do you want disable this payment account?')}" id="payment-form" style="padding: 20px 0;">
-          <form id="easypaymentgateway-form" class="form form-easypaymentgateway-order" data-role="easypaymentgateway-form">
+          <form data-mage-init="{'validation': {}}" id="easypaymentgateway-form" class="form form-easypaymentgateway-order" data-role="easypaymentgateway-form">
            <fieldset class="fieldset payment method" data-bind="attr: {id: 'payment_form_' + getCode()}">
 
           <div data-bind="visible: getEpgData().accounts != null && getEpgData().accounts.length > 0">
@@ -36,7 +27,7 @@
               <ul class="accounts">
                 <!-- ko foreach: getEpgData().accounts -->
                  <li afterRender="$parent._EPGInitFunctions()">
-                     <input data-bind="{attr: {id: 'account' + accountId, value: accountId }, checked: $index() == 0}" type="radio" name="payment[account]" />
+                     <input data-bind="{attr: {id: 'account' + accountId, value: accountId, checked: $index() == 0 }, checked: $parent.creditCardAccount}" type="radio" name="payment[account]" />
                      <label data-bind="attr: {for: 'account' + accountId, 'data-account-id': accountId }" class="account">
                          <span class="card-type">
                              <strong data-bind="i18n: 'Card type'"></strong> <span data-bind="text: $parent.getAccountInfo($data)['cardType']"></span>
@@ -50,7 +41,7 @@
                  <!-- /ko -->
 
                  <li>
-                     <input id="account0" type="radio" name="payment[account]" value="0" />
+                     <input id="account0" type="radio" name="payment[account]" value="0" data-bind="checked: creditCardAccount"/>
                      <label for="account0" class="account new-card" data-account-id="">
                          <span class="card-type">
                              <strong><span class="label" data-bind="i18n: 'New card'"></span></strong>
@@ -60,24 +51,30 @@
               </ul>
          </div>
 
+         <div class="messages">
+           <!-- ko foreach: getRegion('messages') -->
+           <!-- ko template: getTemplate() --><!-- /ko -->
+           <!--/ko-->
+         </div>
+
              <div class="field card-holder-name required" data-bind="css: {hidden: getEpgData().accounts != null && getEpgData().accounts.length > 0}">
                  <label data-bind="{attr: {for: getCode() + '_card_holder_name'}, i18n: 'Card holder name'}" class="label"></label>
                  <div class="input-box">
-                     <input type="text" data-bind="attr: {title: $t('Card holder name'), id: getCode() + '_card_holder_name', value: ''}" class="input-text required-entry" name="payment[card_holder_name]" />
+                     <input type="text" data-bind="{attr: {title: $t('Card holder name'), id: getCode() + '_card_holder_name'}, value: creditCardHoldName}" data-validate="{required:true}" class="input-text required-entry" name="payment[card_holder_name]" />
                  </div>
              </div>
 
              <div class="field card-number required" data-bind="css: {hidden: getEpgData().accounts != null && getEpgData().accounts.length > 0}">
                  <label data-bind="{attr: {for: getCode() + '_card_number'}, i18n: 'Credit/Debit card number'}" class="label"></label>
                  <div class="input-box">
-                     <input type="text" data-bind="attr: {title: $t('Credit/Debit card number'), id: getCode() + '_card_number', value: ''}" class="input-text validate-cc-number required-entry" name="payment[card_number]" />
+                     <input type="text" data-bind="{attr: {title: $t('Credit/Debit card number'), id: getCode() + '_card_number'}, value: creditCardNumber}" class="input-text validate-cc-number required-entry" name="payment[card_number]" />
                  </div>
              </div>
 
              <div class="field card-cvn required">
                  <label data-bind="{attr: {for: getCode() + '_card_cvn'}, i18n: 'CVN'}" class="label"></label>
                  <div class="input-box">
-                     <input type="text" data-bind="attr: {title: $t('CVN'), id: getCode() + '_card_cvn', value: ''}" name="payment[card_cvn]" class="input-text validate-cvn-number required-entry" />
+                     <input type="text" data-bind="{attr: {title: $t('CVN'), id: getCode() + '_card_cvn'}, value: creditCardCvn}" name="payment[card_cvn]" minlength="3" class="input-text validate-cc-cvn required-entry" />
                  </div>
              </div>
 
@@ -85,14 +82,14 @@
                  <label data-bind="{attr: {for: getCode() + '_expiration'}, i18n: 'Expiration Date (MM/YY)'}" class="label"></label>
                  <div class="input-box">
                      <div class="v-fix">
-                         <select data-bind="{attr: {id: getCode() + '_card_expiry_month'}}" name="payment[card_expiry_month]" class="month">
+                         <select data-validate="{'required-entry':true}" data-bind="{attr: {id: getCode() + '_card_expiry_month'}, value: creditCardExpMonth}" name="payment[card_expiry_month]" class="month">
                            <!-- ko foreach: getEpgData().months -->
                              <option data-bind="{attr: {value: $data}, text: $data}"></option>
                            <!-- /ko -->
                          </select>
                      </div>
                      <div class="v-fix">
-                       <select data-bind="{attr: {id: getCode() + '_card_expiry_year'}}" name="payment[card_expiry_year]" class="year">
+                       <select data-validate="{'required-entry':true}" data-bind="{attr: {id: getCode() + '_card_expiry_year'}, value: creditCardExpYear}" name="payment[card_expiry_year]" class="year">
                          <!-- ko foreach: getEpgData().years -->
                            <option data-bind="{attr: {value: $data}, text: $data}"></option>
                          <!-- /ko -->
@@ -103,7 +100,15 @@
 
         </fieldset>
        </form>
+
       </div><!-- .block-form -->
+
+      <div class="payment-method-billing-address epg-billing-address">
+          <!-- ko foreach: $parent.getRegion(getBillingAddressFormName()) -->
+          <!-- ko template: getTemplate() --><!-- /ko -->
+          <!--/ko-->
+      </div>
+
      </div><!-- .epg-form -->
 
         <div class="actions-toolbar">

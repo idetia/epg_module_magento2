@@ -11,8 +11,8 @@ class FormValidator extends AbstractValidator
      */
     public function validate(array $validationSubject)
     {
-        $isValid = false;
-        $errors = ['Hubo un error'];
+        $isValid = true;
+        $errors = [];
 
         return $this->createResult($isValid, $errors);
     }
