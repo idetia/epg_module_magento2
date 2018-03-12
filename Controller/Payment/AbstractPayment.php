@@ -87,7 +87,6 @@ abstract class AbstractPayment extends Action
 
       $cart->setIsActive(0)->save();
       ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setQuoteId(null);
-      // $this->_modelCart->truncate()->save();
   }
 
 

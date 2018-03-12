@@ -36,12 +36,12 @@ final class ConfigProvider implements ConfigProviderInterface
     /**
      * @var UrlInterface
      */
-    protected $_assetRepo;
+    protected $_frameworkUrlInterface;
 
     /**
      * @var AssetRepository
      */
-    protected $_moduleReader;
+    protected $_assetRepo;
 
     public function __construct(
         ScopeConfigInterface $configScopeConfigInterface,

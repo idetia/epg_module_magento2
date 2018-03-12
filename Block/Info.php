@@ -58,8 +58,8 @@ class Info extends BlockInfo
               $accountInfo[$value['name']] = $value['value'];
           }
 
-          $data[__('Card type')] = $accountInfo['cardType'];
-          $data[__('Card number')] = $accountInfo['maskedCardNumber'];
+          $data[__('Card type')] = isset($accountInfo['cardType'])?$accountInfo['cardType']:'';
+          $data[__('Card number')] = isset($accountInfo['maskedCardNumber'])?$accountInfo['maskedCardNumber']:'';
       }
 
       $transport = parent::_prepareSpecificInformation($transport);

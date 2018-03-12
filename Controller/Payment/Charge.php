@@ -14,6 +14,7 @@ use Magento\Framework\App\ObjectManager;
 use Magento\Framework\App\RequestInterface;
 use Magento\Store\Model\ScopeInterface;
 use Magento\Store\Model\StoreManagerInterface;
+use Magento\Framework\UrlInterface;
 
 class Charge extends AbstractPayment
 {
@@ -42,22 +43,26 @@ class Charge extends AbstractPayment
      */
     protected $_modelOrderFactory;
 
-    public function __construct(Context $context, 
-        CustomerFactory $modelCustomerFactory, 
-        ModelCustomerFactory $customerModelCustomerFactory, 
-        OnepageFactory $typeOnepageFactory, 
-        Cart $modelCart, 
-        StoreManagerInterface $modelStoreManagerInterface, 
-        RequestInterface $appRequestInterface, 
-        ApiFactory $modelApiFactory, 
-        ScopeConfigInterface $configScopeConfigInterface, 
-        OrderFactory $modelOrderFactory)
+    protected $_urlInterface;
+
+    public function __construct(Context $context,
+        CustomerFactory $modelCustomerFactory,
+        ModelCustomerFactory $customerModelCustomerFactory,
+        OnepageFactory $typeOnepageFactory,
+        Cart $modelCart,
+        StoreManagerInterface $modelStoreManagerInterface,
+        RequestInterface $appRequestInterface,
+        ApiFactory $modelApiFactory,
+        ScopeConfigInterface $configScopeConfigInterface,
+        OrderFactory $modelOrderFactory,
+        UrlInterface $urlInterface)
     {
         $this->_modelStoreManagerInterface = $modelStoreManagerInterface;
         $this->_appRequestInterface = $appRequestInterface;
         $this->_modelApiFactory = $modelApiFactory;
         $this->_configScopeConfigInterface = $configScopeConfigInterface;
         $this->_modelOrderFactory = $modelOrderFactory;
+        $this->_urlInterface = $urlInterface;
 
         parent::__construct($context, $modelCustomerFactory, $customerModelCustomerFactory, $typeOnepageFactory, $modelCart);
     }
@@ -65,8 +70,6 @@ class Charge extends AbstractPayment
   public function execute()
   {
       $errors = [];
-      $urlSuccess = 'checkout/onepage/success';
-      $urlFail = 'easypaymentgateway/payment/failed';
 
       $cart = ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->getQuote();
       $billingAddress = $cart->getBillingAddress();
@@ -76,7 +79,7 @@ class Charge extends AbstractPayment
       // Charge
       try{
           $isSSL = ($this->_modelStoreManagerInterface->getStore()->isFrontUrlSecure() && $this->_appRequestInterface->isSecure());
-          $returnUrl = Mage::getUrl('easypaymentgateway/payment/return', ['_secure'=>$isSSL]);
+          $returnUrl = $this->_urlInterface->getUrl('easypaymentgateway/payment/return', ['_secure'=>$isSSL]);
           $prepayToken = ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->getEpgPrepaymentToken();
           $epgCustomerId = ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->getEpgCustomerId();
           $epgApi = $this->_modelApiFactory->create();
@@ -153,7 +156,6 @@ class Charge extends AbstractPayment
           switch($chargeResult['status']) {
               case 'SUCCESS':
                   $this->processOrder($chargeResult, $epg_order, $cart);
-                  $this->_redirect('checkout/onepage/success', ['_secure'=> $isSSL]);
                   return true;
               case 'ERROR':
               case 'FAIL':

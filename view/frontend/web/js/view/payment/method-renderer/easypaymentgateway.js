@@ -2,9 +2,11 @@ define(
     [
         'Magento_Checkout/js/view/payment/default',
         'mage/translate',
-        'EPG_EasyPaymentGateway/js/model/credit-card-data'
+        'EPG_EasyPaymentGateway/js/model/credit-card-data',
+        'Magento_Checkout/js/model/payment/additional-validators',
+        'Magento_Checkout/js/action/redirect-on-success'
     ],
-    function (Component, $t, creditCardData) {
+    function (Component, $t, creditCardData, additionalValidators, redirectOnSuccessAction) {
         'use strict';
 
         return Component.extend({
@@ -197,7 +199,52 @@ define(
             validate: function() {
                 var form = jQuery('#' + this.getCode() + '-form');
                 return form.validation() && form.validation('isValid');
+            },
+
+            // Override original placeOrder
+            placeOrder: function (data, event) {
+                var self = this;
+
+                if (event) {
+                    event.preventDefault();
+                }
+
+                if (this.validate() && additionalValidators.validate()) {
+                    this.isPlaceOrderActionAllowed(false);
+
+                    this.getPlaceOrderDeferredObject()
+                        .fail(
+                            function (response) {
+                                // If return a redirectURL
+                                if (response['responseJSON'] && response['responseJSON']['message']) {
+                                  try {
+                                      var result = JSON.parse(response['responseJSON']['message']);
+                                      if (result['redirectURL']) {
+                                        window.location.href = result['redirectURL'];
+                                      }
+                                  } catch (e) {}
+                                }
+
+                                self.isPlaceOrderActionAllowed(true);
+                            }
+                        ).done(
+                            function (response) {
+                                console.log(response);
+                                
+                                self.afterPlaceOrder();
+
+                                if (self.redirectAfterPlaceOrder) {
+                                    redirectOnSuccessAction.execute();
+                                }
+                            }
+                        );
+
+                    return true;
+                }
+
+                return false;
             }
+
         });
     }
 );
