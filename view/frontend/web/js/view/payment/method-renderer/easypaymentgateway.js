@@ -220,6 +220,7 @@ define(
                                   try {
                                       var result = JSON.parse(response['responseJSON']['message']);
                                       if (result['redirectURL']) {
+                                        jQuery('.messages').css('display', 'none');
                                         window.location.href = result['redirectURL'];
                                       }
                                   } catch (e) {}
@@ -230,7 +231,7 @@ define(
                         ).done(
                             function (response) {
                                 console.log(response);
-                                
+
                                 self.afterPlaceOrder();
 
                                 if (self.redirectAfterPlaceOrder) {

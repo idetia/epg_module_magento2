@@ -44,10 +44,6 @@
           <label>Allowed Credit Cards</label>
           <source_model>EPG\EasyPaymentGateway\Model\System\Config\Source\Creditcards</source_model>
         </field>
-        <field id="epg_create_invoice" translate="label" sortOrder="7" type="select" showInDefault="1" showInWebsite="1" showInStore="1">
-          <label>Automatically invoiced on payment</label>
-          <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-        </field>
       </group>
     </section>
   </system>

@@ -33,42 +33,48 @@ class Info extends BlockInfo
 
     protected function _prepareSpecificInformation($transport = null)
     {
-      if (null !== $this->_paymentSpecificInformation)
-      {
+      if (null !== $this->_paymentSpecificInformation) {
         return $this->_paymentSpecificInformation;
       }
+
       $data = [];
       $account = null;
 
-      if (!empty(ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->getEpgPaymentInfo())) {
-          $account = ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->getEpgPaymentInfo();
-      } else {
-          $order = $this->getInfo()->getOrder();
-          if (!empty($order) && !empty($order->getId())) {
-              $epgOrder = $this->_modelOrderFactory->create()->getByOrderId($order->getId());
+      if (null === $this->_paymentSpecificInformation) {
+          if (null === $transport) {
+              $transport = new \Magento\Framework\DataObject();
+          } elseif (is_array($transport)) {
+              $transport = new \Magento\Framework\DataObject($transport);
+          }
 
-              if (!empty($epgOrder) && !empty($epgOrder->getIdEpgOrder())) {
-                  $account = $this->_helperData->getAccountById($epgOrder->getIdAccount());
+          if (!empty(ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->getEpgPaymentInfo())) {
+              $account = ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->getEpgPaymentInfo();
+          } else {
+              $order = $this->getInfo()->getOrder();
+              if (!empty($order) && !empty($order->getId())) {
+                  $epgOrder = $this->_modelOrderFactory->create()->getByOrderId($order->getId());
+
+                  if (!empty($epgOrder) && !empty($epgOrder->getIdEpgOrder())) {
+                      $account = $this->_helperData->getAccountById($epgOrder->getIdAccount());
+                  }
               }
           }
-      }
 
-      if (!empty($account)) {
-          foreach ($account['values'] as $value) {
-              $accountInfo[$value['name']] = $value['value'];
+          if (!empty($account)) {
+              foreach ($account['values'] as $value) {
+                  $accountInfo[$value['name']] = $value['value'];
+              }
+
+              $data[(string)__('Card type')] = isset($accountInfo['cardType'])?$accountInfo['cardType']:'';
+              $data[(string)__('Card number')] = isset($accountInfo['maskedCardNumber'])?$accountInfo['maskedCardNumber']:'';
           }
 
-          $data[__('Card type')] = isset($accountInfo['cardType'])?$accountInfo['cardType']:'';
-          $data[__('Card number')] = isset($accountInfo['maskedCardNumber'])?$accountInfo['maskedCardNumber']:'';
+          $transport->setData(array_merge($data, $transport->getData()));
+
+          $this->_paymentSpecificInformation = $transport;
       }
 
-      $transport = parent::_prepareSpecificInformation($transport);
-
-      if (empty($transport)) {
-          return;
-      }
-
-      return $transport->setData(array_merge($data, $transport->getData()));
+      return $this->_paymentSpecificInformation;
     }
 
 }

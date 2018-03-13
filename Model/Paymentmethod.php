@@ -101,12 +101,18 @@ class Paymentmethod extends AbstractMethod {
 
   protected $errors = [];
 
+  // Capture
   public function capture(\Magento\Payment\Model\InfoInterface $payment, $amount)
   {
     parent::capture($payment, $amount);
 
     try{
-          return $this->charge();
+        if (empty($this->_checkoutSession->getReturnPayment()) || !$this->_checkoutSession->getReturnPayment()) {
+            return $this->charge();
+        }
+
+        $this->_checkoutSession->unsReturnPayment();
+        return $this;
 
       } catch (\Exception $e) {
           $this->debugData(['exception' => $e->getMessage()]);
@@ -115,6 +121,7 @@ class Paymentmethod extends AbstractMethod {
 
    }
 
+   // Charge
    public function charge()
    {
        $this->createEpgOrder();
@@ -124,10 +131,9 @@ class Paymentmethod extends AbstractMethod {
        $totals = $cart->collectTotals();
        $cartId = $billingAddress->getQuoteId();
 
-       // Charge
        try{
            $isSSL = ($this->_modelStoreManagerInterface->getStore()->isFrontUrlSecure() && $this->_appRequestInterface->isSecure());
-           $returnUrl = $this->_urlInterface->getUrl('easypaymentgateway/payment/return', ['_secure'=>$isSSL]);
+           $returnUrl = $this->_urlInterface->getUrl('easypaymentgateway/payment/returnPayment', ['_secure'=>$isSSL]);
            $prepayToken = ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->getEpgPrepaymentToken();
            $epgCustomerId = ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->getEpgCustomerId();
            $uniqId = uniqid();
@@ -213,12 +219,8 @@ class Paymentmethod extends AbstractMethod {
                    throw new \Exception($errors);
                    return false;
            }
-
        }
-
    }
-
-
 
    private function createEpgOrder() {
      // Call API

@@ -2,11 +2,7 @@
 
 namespace EPG\EasyPaymentGateway\Controller\Payment;
 
-use EPG\EasyPaymentGateway\Model\CustomerFactory;
 use EPG\EasyPaymentGateway\Model\OrderFactory;
-use EPG\EasyPaymentGateway\Model\Type\OnepageFactory;
-use Magento\Checkout\Model\Cart;
-use Magento\Customer\Model\CustomerFactory as ModelCustomerFactory;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\ObjectManager;
 use Magento\Framework\App\RequestInterface;
@@ -15,6 +11,10 @@ use Magento\Sales\Model\Order;
 use Magento\Sales\Model\OrderFactory as ModelOrderFactory;
 use Magento\Sales\Model\Order\Payment\Transaction;
 use Magento\Store\Model\StoreManagerInterface;
+use EPG\EasyPaymentGateway\Model\CustomerFactory as EpgCustomerFactory;
+use Magento\Customer\Api\CustomerRepositoryInterfaceFactory;
+use Magento\Checkout\Model\Type\Onepage as TypeOnepage;
+use Psr\Log\LoggerInterface;
 
 class ReturnPayment extends AbstractPayment
 {
@@ -43,24 +43,36 @@ class ReturnPayment extends AbstractPayment
      */
     protected $_salesModelOrderFactory;
 
+    protected $_epgCustomer;
+
+    protected $_customerRepository;
+
+    protected $_typeOnepage;
+
+    protected $_logger;
+
     public function __construct(Context $context,
-        CustomerFactory $modelCustomerFactory,
-        ModelCustomerFactory $customerModelCustomerFactory,
-        OnepageFactory $typeOnepageFactory,
-        Cart $modelCart,
         StoreManagerInterface $modelStoreManagerInterface,
         RequestInterface $appRequestInterface,
         OrderFactory $modelOrderFactory,
         QuoteFactory $modelQuoteFactory,
-        ModelOrderFactory $salesModelOrderFactory)
+        ModelOrderFactory $salesModelOrderFactory,
+        EpgCustomerFactory $epgCustomerFactory,
+        CustomerRepositoryInterfaceFactory $customerRepositoryFactory,
+        TypeOnepage $typeOnepage,
+        LoggerInterface $logger)
     {
+        parent::__construct($context);
+
         $this->_modelStoreManagerInterface = $modelStoreManagerInterface;
         $this->_appRequestInterface = $appRequestInterface;
         $this->_modelOrderFactory = $modelOrderFactory;
         $this->_modelQuoteFactory = $modelQuoteFactory;
         $this->_salesModelOrderFactory = $salesModelOrderFactory;
-
-        parent::__construct($context, $modelCustomerFactory, $customerModelCustomerFactory, $typeOnepageFactory, $modelCart);
+        $this->_epgCustomer = $epgCustomerFactory->create();
+        $this->_customerRepository = $customerRepositoryFactory->create();
+        $this->_typeOnepage = $typeOnepage;
+        $this->_logger = $logger;
     }
 
   public function execute()
@@ -93,6 +105,7 @@ class ReturnPayment extends AbstractPayment
             $errors[] = __('The order does not exists.');
             ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgErrors($errors);
             $this->_redirect('easypaymentgateway/payment/fail', ['_secure' => $isSSL]);
+            return null;
         }
 
         $quote = $this->_modelQuoteFactory->create()->load($cartId);
@@ -101,19 +114,41 @@ class ReturnPayment extends AbstractPayment
             ->setTotalsCollectedFlag(false)
             ->collectTotals()
             ->save();
+
         ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setQuoteId($cartId);
         ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->replaceQuote($quote);
         ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->setCartWasUpdated(true);
+        ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setReturnPayment(true);
 
         // SUCCESS
         if ($returnType == 'success') {
-            $this->processOrder([
-                'transactionId' => $epg_order->getIdTransaction(),
-                'transactionResponse' => $epg_order->getPaymentDetails()
-            ], $epg_order, $quote);
+            try {
+              // Load customer
+              $epgCustomer = $this->_epgCustomer->loadByAttributes(['epg_customer_id' => $epg_order->getEpgCustomerId()]);
+              $customer = ObjectManager::getInstance()->create('Magento\Customer\Model\Customer')->load($epgCustomer->getCustomerId());
+              ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->setCustomer($customer);
 
-            $this->_redirect('checkout/onepage/success', ['_secure'=> $isSSL]);
-            return true;
+              ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgChargeData(
+                [
+                  'chargeResult' => [
+                      'transactionId' => $epg_order->getIdTransaction(),
+                      'transactionResponse' => json_decode($epg_order->getPaymentDetails(), true)
+                  ],
+                  'epgOrder' => $epg_order
+                ]
+              );
+
+              $this->_typeOnepage->saveOrder();
+
+              $this->_redirect('checkout/onepage/success', ['_secure'=> $isSSL]);
+              return null;
+
+            } catch (\Exception $e) {
+              $errors[] = __('There was an error processing the order: ') . $e->getMessage();
+              ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgErrors($errors);
+              $this->_redirect('easypaymentgateway/payment/fail', ['_secure'=> $isSSL]);
+              return null;
+            }
 
         // STATUS
         } elseif ($returnType == 'status') {
@@ -173,7 +208,7 @@ class ReturnPayment extends AbstractPayment
                 }
 
                 if ($order->getState() !== Order::STATE_COMPLETE) {
-                    $order->setState(Order::STATE_CANCELED, true, $responseParams['o_message']);
+                    $order->setState(Order::STATE_CANCELED);
                     $order->save();
                 }
             }
@@ -203,7 +238,7 @@ class ReturnPayment extends AbstractPayment
 
         // CANCEL
         } elseif ($returnType == 'cancel') {
-            $errors[] = __('There payment was cancelled.');
+            $errors[] = __('The payment was cancelled.');
 
         // ERROR
         } elseif ($returnType == 'error') {
