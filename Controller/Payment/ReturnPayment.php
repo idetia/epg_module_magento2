@@ -262,8 +262,10 @@ class ReturnPayment extends AbstractPayment
 
     // Load customer
     $epgCustomer = $this->_epgCustomer->loadByAttributes(['epg_customer_id' => $epg_order->getEpgCustomerId()]);
-    $customer = ObjectManager::getInstance()->create('Magento\Customer\Model\Customer')->load($epgCustomer->getCustomerId());
-    ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->setCustomer($customer);
+    if (!empty($epgCustomer)) {
+        $customer = ObjectManager::getInstance()->create('Magento\Customer\Model\Customer')->load($epgCustomer->getCustomerId());
+        ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->setCustomer($customer);
+    }
 
     ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgChargeData(
       [
