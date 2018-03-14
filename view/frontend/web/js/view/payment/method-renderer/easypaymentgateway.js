@@ -221,7 +221,7 @@ define(
                                       var result = JSON.parse(response['responseJSON']['message']);
                                       if (result['redirectURL']) {
                                         jQuery('.messages').css('display', 'none');
-                                        //window.location.href = result['redirectURL'];
+                                        window.location.href = result['redirectURL'];
                                       }
                                   } catch (e) {}
                                 }

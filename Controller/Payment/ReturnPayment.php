@@ -118,11 +118,12 @@ class ReturnPayment extends AbstractPayment
         ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setQuoteId($cartId);
         ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->replaceQuote($quote);
         ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->setCartWasUpdated(true);
-        ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setReturnPayment(true);
 
         // SUCCESS
         if ($returnType == 'success') {
             try {
+              ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setReturnPayment(true);
+
               // Load customer
               $epgCustomer = $this->_epgCustomer->loadByAttributes(['epg_customer_id' => $epg_order->getEpgCustomerId()]);
               $customer = ObjectManager::getInstance()->create('Magento\Customer\Model\Customer')->load($epgCustomer->getCustomerId());
