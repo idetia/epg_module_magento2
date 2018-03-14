@@ -15,6 +15,7 @@ use EPG\EasyPaymentGateway\Model\CustomerFactory as EpgCustomerFactory;
 use Magento\Customer\Api\CustomerRepositoryInterfaceFactory;
 use Magento\Checkout\Model\Type\Onepage as TypeOnepage;
 use Psr\Log\LoggerInterface;
+use Magento\Sales\Model\Order\Payment\Transaction\BuilderInterface;
 
 class ReturnPayment extends AbstractPayment
 {
@@ -51,6 +52,8 @@ class ReturnPayment extends AbstractPayment
 
     protected $_logger;
 
+    protected $_transactionBuilder;
+
     public function __construct(Context $context,
         StoreManagerInterface $modelStoreManagerInterface,
         RequestInterface $appRequestInterface,
@@ -60,7 +63,8 @@ class ReturnPayment extends AbstractPayment
         EpgCustomerFactory $epgCustomerFactory,
         CustomerRepositoryInterfaceFactory $customerRepositoryFactory,
         TypeOnepage $typeOnepage,
-        LoggerInterface $logger)
+        LoggerInterface $logger,
+        BuilderInterface $transactionBuilder)
     {
         parent::__construct($context);
 
@@ -73,6 +77,7 @@ class ReturnPayment extends AbstractPayment
         $this->_customerRepository = $customerRepositoryFactory->create();
         $this->_typeOnepage = $typeOnepage;
         $this->_logger = $logger;
+        $this->_transactionBuilder = $transactionBuilder;
     }
 
   public function execute()
@@ -122,24 +127,7 @@ class ReturnPayment extends AbstractPayment
         // SUCCESS
         if ($returnType == 'success') {
             try {
-              ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setReturnPayment(true);
-
-              // Load customer
-              $epgCustomer = $this->_epgCustomer->loadByAttributes(['epg_customer_id' => $epg_order->getEpgCustomerId()]);
-              $customer = ObjectManager::getInstance()->create('Magento\Customer\Model\Customer')->load($epgCustomer->getCustomerId());
-              ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->setCustomer($customer);
-
-              ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgChargeData(
-                [
-                  'chargeResult' => [
-                      'transactionId' => $epg_order->getIdTransaction(),
-                      'transactionResponse' => json_decode($epg_order->getPaymentDetails(), true)
-                  ],
-                  'epgOrder' => $epg_order
-                ]
-              );
-
-              $this->_typeOnepage->saveOrder();
+              $this->createOrder($epg_order, json_decode($epg_order->getPaymentDetails(), true));
 
               $this->_redirect('checkout/onepage/success', ['_secure'=> $isSSL]);
               return null;
@@ -175,6 +163,8 @@ class ReturnPayment extends AbstractPayment
                 return false;
             }
 
+            $transactionType = Transaction::TYPE_PAYMENT;
+
             // UC-01: EPG status is REDIRECTED && operation status is ERROR or VOIDED && order id is null
             if ($epg_order->getPaymentStatus() == 'REDIRECTED' &&
                 ($responseParams['o_status'] == 'ERROR' || $responseParams['o_status'] == 'VOIDED') &&
@@ -189,11 +179,8 @@ class ReturnPayment extends AbstractPayment
                 empty($orderId)
                 ) {
                 // Order must be created
-                $cart = $this->_modelQuoteFactory->create()->load($epg_order->getIdCart());
-                $this->processOrder([
-                    'transactionId' => $epg_order->getIdTransaction(),
-                    'transactionResponse' => $responseParams
-                ], $epg_order, $cart);
+                $this->createOrder($epg_order, $responseParams);
+                $this->_redirect('checkout/onepage/success', ['_secure'=> $isSSL]);
             }
 
             // UC-03: EPG status is SUCCESS && operation status is ERROR or VOIDED && order id is not null
@@ -209,6 +196,7 @@ class ReturnPayment extends AbstractPayment
                 }
 
                 if ($order->getState() !== Order::STATE_COMPLETE) {
+                    $transactionType = Transaction::TYPE_VOID;
                     $order->setState(Order::STATE_CANCELED);
                     $order->save();
                 }
@@ -217,14 +205,24 @@ class ReturnPayment extends AbstractPayment
             // Save transaction data in order
             if (!empty($orderId)) {
                 $order = $this->_salesModelOrderFactory->create()->load($orderId);
+
                 $payment = $order->getPayment();
-                $transaction = $payment->addTransaction('order');
-                $transaction->setTxnId($responseParams['o_payFrexTransactionId']);
-                $transaction->setParentTxnId($responseParams['o_merchantTransactionId']);
-                $transaction->setAdditionalInformation(Transaction::RAW_DETAILS, $responseParams);
-                $transaction->setIsClosed(true);
-                $transaction->save();
-                $payment->save();
+                $payment->setTransactionId($responseParams['o_payFrexTransactionId']);
+                $payment->setLastTransId($responseParams['o_payFrexTransactionId']);
+
+                $transaction = $this->_transactionBuilder
+                    ->setPayment($payment)
+                    ->setOrder($order)
+                    ->setTransactionId($responseParams['o_payFrexTransactionId'])
+                    ->setAdditionalInformation(
+                        [Transaction::RAW_DETAILS => $responseParams]
+                    )
+                    ->setFailSafe(true)
+                    ->build($transationType);
+                  $transaction->save();
+
+                  $payment->setParentTransactionId($responseParams['o_merchantTransactionId']);
+                  $payment->save();
 
                 $order->save();
             }
@@ -256,5 +254,27 @@ class ReturnPayment extends AbstractPayment
         $this->_redirect('easypaymentgateway/payment/fail', ['_secure' => $isSSL]);
         return false;
     }
+  }
+
+  private function createOrder($epg_order, $transactionResponse)
+  {
+    ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setReturnPayment(true);
+
+    // Load customer
+    $epgCustomer = $this->_epgCustomer->loadByAttributes(['epg_customer_id' => $epg_order->getEpgCustomerId()]);
+    $customer = ObjectManager::getInstance()->create('Magento\Customer\Model\Customer')->load($epgCustomer->getCustomerId());
+    ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->setCustomer($customer);
+
+    ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgChargeData(
+      [
+        'chargeResult' => [
+            'transactionId' => $epg_order->getIdTransaction(),
+            'transactionResponse' => $transactionResponse
+        ],
+        'epgOrder' => $epg_order
+      ]
+    );
+
+    $this->_typeOnepage->saveOrder();
   }
 }

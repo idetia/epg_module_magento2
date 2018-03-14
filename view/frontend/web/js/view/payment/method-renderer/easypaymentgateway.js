@@ -230,8 +230,6 @@ define(
                             }
                         ).done(
                             function (response) {
-                                console.log(response);
-
                                 self.afterPlaceOrder();
 
                                 if (self.redirectAfterPlaceOrder) {
