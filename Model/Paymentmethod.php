@@ -204,6 +204,7 @@ class Paymentmethod extends AbstractMethod {
        } else {
            switch($chargeResult['status']) {
                case 'SUCCESS':
+               case 'PENDING':
                    $this->_checkoutSession->setEpgChargeData(
                      [
                        'chargeResult' => $chargeResult,

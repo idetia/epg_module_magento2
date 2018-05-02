@@ -38,7 +38,13 @@ class ProcessOrder extends AbstractModel
 
         $order->setEpgTransactionId($chargeResult['transactionId']);
 
-        $order->setState(Order::STATE_PROCESSING);
+        if ($chargeResult['status'] == 'PENDING') {
+            // PENDING
+            $order->setState(Order::STATE_PAYMENT_REVIEW);
+        } else {
+            // SUCCESS
+            $order->setState(Order::STATE_PROCESSING);
+        }
 
         $details = [];
         try{

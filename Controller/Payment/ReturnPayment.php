@@ -173,9 +173,9 @@ class ReturnPayment extends AbstractPayment
                 // Nothing to do
             }
 
-            // UC-02: EPG status is REDIRECTED && operation status is SUCCESS && order id is null
+            // UC-02: EPG status is REDIRECTED && operation status is SUCCESS|PENDING && order id is null
             if ($epg_order->getPaymentStatus() == 'REDIRECTED' &&
-                $responseParams['o_status'] == 'SUCCESS' &&
+                ($responseParams['o_status'] == 'SUCCESS' || $responseParams['o_status'] == 'PENDING') &&
                 empty($orderId)
                 ) {
                 // Order must be created
@@ -183,8 +183,8 @@ class ReturnPayment extends AbstractPayment
                 $this->_redirect('checkout/onepage/success', ['_secure'=> $isSSL]);
             }
 
-            // UC-03: EPG status is SUCCESS && operation status is ERROR or VOIDED && order id is not null
-            if ($epg_order->getPaymentStatus() == 'SUCCESS' &&
+            // UC-03: EPG status is SUCCESS|PENDING && operation status is ERROR or VOIDED && order id is not null
+            if (($epg_order->getPaymentStatus() == 'SUCCESS' || $epg_order->getPaymentStatus() == 'PENDING') &&
                 ($responseParams['o_status'] == 'ERROR' || $responseParams['o_status'] == 'VOIDED') &&
                 !empty($orderId)
                 ) {
