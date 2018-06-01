@@ -20,11 +20,15 @@ class Api
      */
     protected $_modelStoreManagerInterface;
 
+    protected $_logger;
+
     public function __construct(ScopeConfigInterface $configScopeConfigInterface,
-        StoreManagerInterface $modelStoreManagerInterface)
+        StoreManagerInterface $modelStoreManagerInterface,
+        \Psr\Log\LoggerInterface $logger)
     {
         $this->_configScopeConfigInterface = $configScopeConfigInterface;
         $this->_modelStoreManagerInterface = $modelStoreManagerInterface;
+        $this->_logger = $logger;
 
     }
 
@@ -45,7 +49,8 @@ class Api
     public function authentication(
             $customerId,
             $currency,
-            $country
+            $country,
+            $operation = 'debit'
             )
     {
         $client = new HttpClient(['verify' => false]);
@@ -62,12 +67,11 @@ class Api
                     'productId' => trim($this->_configScopeConfigInterface->getValue('payment/easypaymentgateway/epg_product_id', ScopeInterface::SCOPE_STORE)),
                     'country' => $country,
                     'currency' => $currency,
-                    'operations' => ['debit']
+                    'operations' => [$operation]
                 ];
 
-//            var_dump(json_encode($headers));
-//            var_dump(json_encode($body));
-//            var_dump(($this->getBaseEndPoint(false) . 'auth'));
+            $this->debugLog('Authentication - operation: ' . $operation);
+            $this->debugLog('Authentication - customerId: ' . $customerId);
 
             $response = $client->post( $this->getBaseEndPoint(false) . 'auth', [
                 'timeout' => self::CONNECTION_TIMEOUT,
@@ -83,6 +87,49 @@ class Api
             }
 
         } catch (RequestException $e) {
+            $this->debugLog('Authentication error: ' . $e->getMessage());
+            if ($e->hasResponse()) {
+                $error = json_decode($e->getResponse()->getBody(), true);
+                $error = isset($error['errorMessage'])?$error['errorMessage']:$error;
+                $error = isset($error['message'])?$error['message']:$error;
+                throw new \Exception(print_r($error, true));
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Cashier
+     */
+    public function cashier($authToken, $operation = 'debit/credit')
+    {
+        $client = new HttpClient(['verify' => false]);
+        try {
+
+            $headers = [
+                        'Content-Type' => 'application/json',
+                        'Accept' => 'application/json',
+                        'authToken' => $authToken
+                    ];
+
+            $this->debugLog('Cashier - authToken: ' . $authToken);
+
+            $response = $client->get( $this->getBaseEndPoint() . 'cashier', array(
+                'timeout' => self::CONNECTION_TIMEOUT,
+                'headers' => $headers,
+                'body' => array()
+            ));
+
+            if ($response->getStatusCode() == 200) {
+                $result = $response->json();
+                if (isset($result['paymentMethods'])) {
+                    return $result;
+                }
+            }
+
+        } catch (RequestException $e) {
+            $this->debugLog('Cashier error: ' . $e->getMessage());
             if ($e->hasResponse()) {
                 $error = json_decode($e->getResponse()->getBody(), true);
                 $error = isset($error['errorMessage'])?$error['errorMessage']:$error;
@@ -97,244 +144,258 @@ class Api
     /**
      * Register account
      */
-    public function registerAccount($authToken, $data)
-    {
-        $client = new HttpClient(['verify' => false]);
-        try {
+     public function registerAccount($authToken, $fields, $method = 'creditcards')
+     {
+         $client = new HttpClient(['verify' => false]);
+         try {
 
-            $headers = [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json',
-                    'authToken' => $authToken
-                    ];
+             $headers = array(
+                     'Content-Type' => 'application/json',
+                     'Accept' => 'application/json',
+                     'authToken' => $authToken
+                     );
 
-            $body = [
-                    'cardNumber' => (isset($data['card_number'])?str_replace(' ', '', (string)$data['card_number']):null),
-                    'expDate' => (isset($data['card_expiry_month'])?(string)$data['card_expiry_month']:null) . (isset($data['card_expiry_year'])?$data['card_expiry_year']:null),
-                    'chName' => (isset($data['card_holder_name'])?(string)$data['card_holder_name']:null),
-                    'cvnNumber' => (isset($data['card_cvn'])?(string)$data['card_cvn']:null),
-                ];
+             $body = $fields;
 
-//            var_dump(json_encode($headers));
-//            var_dump(json_encode($body));
-//            var_dump(($this->getBaseEndPoint() . 'account/creditcards'));
+             $this->debugLog('Register account - request endPoint: ' . ($this->getBaseEndPoint(false) . 'account/' . $method));
+             //$this->debugLog('Register account - fields: ' . json_encode($fields));
 
-            $response = $client->post( $this->getBaseEndPoint() . 'account/creditcards', [
-                'timeout' => self::CONNECTION_TIMEOUT,
-                'headers' => $headers,
-                'body' => json_encode($body)
-            ]);
+             $response = $client->post( $this->getBaseEndPoint() . 'account/' . $method, array(
+                 'timeout' => self::CONNECTION_TIMEOUT,
+                 'headers' => $headers,
+                 'body' => json_encode($body)
+             ));
 
-            $result = null;
-            if ($response->getStatusCode() == 200) {
-                $result = $response->json();
-                if (isset($result['accountId'])) {
-                    return $result;
-                }
-            }
+             $this->debugLog('Register account - response status: ' . $response->getStatusCode());
 
-        } catch (RequestException $e) {
-            if ($e->hasResponse()) {
-                $error = json_decode($e->getResponse()->getBody(), true);
-                $error = isset($error['errorMessage'])?$error['errorMessage']:$error;
-                $error = isset($error['message'])?$error['message']:$error;
-                throw new \Exception(print_r($error, true));
-            }
-        }
+             $result = null;
+             if ($response->getStatusCode() == 200) {
+                 $result = $response->json();
 
-        return false;
-    }
+                 $this->debugLog('Register account - result: ' . json_encode($result));
+
+                 if (isset($result['accountId'])) {
+                     return $result;
+                 }
+             }
+
+         } catch (RequestException $e) {
+             $this->debugLog('Register account error: ' . $e->getMessage());
+             if ($e->hasResponse()) {
+                 $error = json_decode($e->getResponse()->getBody(), true);
+                 $error = isset($error['errorMessage'])?$error['errorMessage']:$error;
+                 $error = isset($error['message'])?$error['message']:$error;
+
+                 throw new \Exception(print_r($error, true));
+             }
+         }
+
+         return false;
+     }
 
     /**
      * Disable account
      */
-    public function disableAccount($authToken, $accountId)
-    {
-        $client = new HttpClient(['verify' => false]);
-        try {
+     public function disableAccount($authToken, $accountId)
+     {
+         $client = new HttpClient(['verify' => false]);
+         try {
 
-            $headers = [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json',
-                    'authToken' => $authToken
-                    ];
+             $headers = array(
+                     'Content-Type' => 'application/json',
+                     'Accept' => 'application/json',
+                     'authToken' => $authToken
+                     );
 
-//            var_dump(json_encode($headers));
-//            var_dump(json_encode($body));
-//            var_dump(($this->getBaseEndPoint() . 'account/disable/' . $accountId));
+ 			$this->debugLog('Disable account: ' . $accountId);
 
-            $response = $client->post( $this->getBaseEndPoint() . 'account/disable/' . $accountId, [
-                'timeout' => self::CONNECTION_TIMEOUT,
-                'headers' => $headers,
-            ]);
+             $response = $client->post( $this->getBaseEndPoint() . 'account/disable/' . $accountId, array(
+                 'timeout' => self::CONNECTION_TIMEOUT,
+                 'headers' => $headers,
+             ));
 
-            $result = null;
-            if ($response->getStatusCode() == 200) {
-                $result = $response->json();
-                if (isset($result['accountId'])) {
-                    return $result;
-                }
-            }
+             $this->debugLog('Disable account response: ' . print_r($error, true));
 
-        } catch (RequestException $e) {
-            if ($e->hasResponse()) {
-                $error = json_decode($e->getResponse()->getBody(), true);
-                $error = isset($error['errorMessage'])?$error['errorMessage']:$error;
-                $error = isset($error['message'])?$error['message']:$error;
-                throw new \Exception(print_r($error, true));
-            }
-        }
+             $result = null;
+             if ($response->getStatusCode() == 200) {
+                 $result = $response->json();
+                 $this->debugLog('Disable account response: ' . json_encode($result));
+                 if (isset($result['accountId'])) {
+                     return $result;
+                 }
+             }
 
-        return false;
-    }
+         } catch (RequestException $e) {
+             $this->debugLog('Disable account error: ' . $e->getMessage());
+             if ($e->hasResponse()) {
+                 $error = json_decode($e->getResponse()->getBody(), true);
+                 $error = isset($error['errorMessage'])?$error['errorMessage']:$error;
+                 $error = isset($error['message'])?$error['message']:$error;
+                 throw new \Exception(print_r($error, true));
+             }
+         }
+
+         return false;
+     }
 
     /**
      * Prepay token
      */
-    public function prepayToken($authToken, $accountId, $data)
-    {
-        $client = new HttpClient(['verify' => false]);
-        try {
+     public function prepayToken($authToken, $accountId, $fields = [])
+     {
+         $client = new HttpClient(['verify' => false]);
+         try {
 
-            $headers = [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json',
-                    'authToken' => $authToken
-                    ];
+             $headers = array(
+                     'Content-Type' => 'application/json',
+                     'Accept' => 'application/json',
+                     'authToken' => $authToken
+                     );
 
-            $body = [
-                    'cvnNumber' => (isset($data['card_cvn'])?(string)$data['card_cvn']:null),
-                ];
+             $body = $fields;
 
-//            var_dump(json_encode($headers));
-//            var_dump(json_encode($body));
-//            var_dump(($this->getBaseEndPoint() . 'prepay/'.$accountId));
+ 			$this->debugLog('Prepay token');
 
-            $response = $client->post( $this->getBaseEndPoint() . 'prepay/' . $accountId, [
-                'timeout' => self::CONNECTION_TIMEOUT,
-                'headers' => $headers,
-                'body' => json_encode($body)
-            ]);
+             $response = $client->post( $this->getBaseEndPoint() . 'prepay/' . $accountId, array(
+                 'timeout' => self::CONNECTION_TIMEOUT,
+                 'headers' => $headers,
+                 'body' => json_encode($body)
+             ));
 
-            $result = null;
-            if ($response->getStatusCode() == 200) {
-                $result = $response->json();
-                if (isset($result['prepayToken'])) {
-                    return $result['prepayToken'];
-                }
-            }
+             $result = null;
+             if ($response->getStatusCode() == 200) {
+                 $result = $response->json();
+                 if (isset($result['prepayToken'])) {
+                     return $result['prepayToken'];
+                 }
+             }
 
-        } catch (RequestException $e) {
-            if ($e->hasResponse()) {
-                $error = json_decode($e->getResponse()->getBody(), true);
-                $error = isset($error['errorMessage'])?$error['errorMessage']:$error;
-                $error = isset($error['message'])?$error['message']:$error;
-                throw new \Exception(print_r($error, true));
-            }
-        }
+         } catch (RequestException $e) {
+             $this->debugLog('Prepay token error: ' . $e->getMessage());
+             if ($e->hasResponse()) {
+                 $error = json_decode($e->getResponse()->getBody(), true);
+                 $error = isset($error['errorMessage'])?$error['errorMessage']:$error;
+                 $error = isset($error['message'])?$error['message']:$error;
+                 throw new \Exception(print_r($error, true));
+             }
+         }
 
-        return false;
-    }
+         return false;
+     }
 
     /**
      * Charge
      */
-    public function charge($cartId, $prepayToken, $customerId, $customer, $address, $total, $currency, $country, $language, $statusURL, $successURL, $errorURL, $cancelURL)
-    {
-        $merchantTransactionId = $this->idGenerator();
-        $client = new HttpClient(['verify' => false]);
-        try {
+     public function charge($prepayToken, $customerId, $customer, $info, $total, $currency, $country, $language, $statusURL, $successURL, $errorURL, $cancelURL, $paymentSolution = 'CreditCards', $operationType = 'credit')
+     {
+         $merchantTransactionId = $this->idGenerator();
+         $client = new HttpClient(['verify' => false]);
+         try {
 
-            $headers = [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json',
-                    'prepayToken' => $prepayToken
-                    ];
+             $headers = array(
+                     'Content-Type' => 'application/json',
+                     'Accept' => 'application/json',
+                     'prepayToken' => $prepayToken
+                     );
 
-            $body = [
-                    'amount' => number_format($total, 2),
-                    'description' => 'Payment from ' . $this->_modelStoreManagerInterface->getStore()->getName() . '.',
-                    'statusURL' => $statusURL,
-                    'successURL' => $successURL,
-                    'errorURL' => $errorURL,
-                    'cancelURL' => $cancelURL,
-                    'firstName' => $address->getFirstname(),
-                    'lastName' => $address->getLastname(),
-                    'customerEmail' => $address->getEmail(),
-                    'addressLine1' => is_array($address->getStreet())?$address->getStreet()[0]:$address->getStreet(),
-                    'addressLine2' => '',
-                    'city' => $address->getCity(),
-                    'postCode' => $address->getPostcode(),
-                    'telephone' => $address->getTelephone(),
-                    'customerCountry' => $address->getCountryId(),
-                    'customerCompanyName' => $address->getCompany(),
+             $body = array(
+                     'amount' => number_format($total, 2),
+                     'description' => 'Payment from ' . get_option('blogname') . '.',
+                     'statusURL' => $statusURL,
+                     'successURL' => $successURL,
+                     'errorURL' => $errorURL,
+                     'cancelURL' => $cancelURL,
+                     'firstName' => $info['first_name'],
+                     'lastName' => $info['last_name'],
+                     'customerEmail' => $info['email'],
+                     'addressLine1' => $info['billing_address_1'],
+                     'addressLine2' => $info['billing_address_2'],
+                     'city' => $info['city'],
+                     'postCode' => $info['postcode'],
+                     'telephone' => $info['phone'],
+                     'customerCountry' => $info['country'],
+                     'customerCompanyName' => $info['company'],
 
-                    'operationType'=> 'credit',
-                    'merchantId'=> trim($this->_configScopeConfigInterface->getValue('payment/easypaymentgateway/epg_merchant_id', ScopeInterface::SCOPE_STORE)),
-                    'merchantPassword'=> trim($this->_configScopeConfigInterface->getValue('payment/easypaymentgateway/epg_merchant_key', ScopeInterface::SCOPE_STORE)),
-                    'productId'=> trim($this->_configScopeConfigInterface->getValue('payment/easypaymentgateway/epg_product_id', ScopeInterface::SCOPE_STORE)),
-                    'country' => $country,
-                    'currency' => $currency,
-                    'paymentSolution'=> 'CreditCards',
-                    'merchantTransactionId'=> $merchantTransactionId,
-                    'language'=> strtolower($language),
-                    'customerId'=> $customerId
-                ];
+                     'operationType'=> $operationType,
+                     'merchantId'=> trim($this->getOption('epg_merchant_id')),
+                     'merchantPassword'=> trim($this->getOption('epg_merchant_key')),
+                     'productId'=> trim($this->getOption('epg_product_id')),
+                     'country' => $country,
+                     'currency' => $currency,
+                     'paymentSolution'=> $paymentSolution,
+                     'merchantTransactionId'=> $merchantTransactionId,
+                     'language'=> strtolower($language),
+                     'customerId'=> $customerId
+                 );
 
-//            var_dump(json_encode($headers));
-//            var_dump(json_encode($body));
-//            var_dump(($this->getBaseEndPoint(false) . 'charge'));
+             $this->debugLog('Charge - request endPoint: ' . ($this->getBaseEndPoint(false) . 'charge'));
+             $this->debugLog('Charge - request body: ' . json_encode($body));
 
-            $response = $client->post( $this->getBaseEndPoint(false) . 'charge', [
-                'timeout' => self::CONNECTION_TIMEOUT,
-                'headers' => $headers,
-                'body' => json_encode($body)
-            ]);
+             $response = $client->post( $this->getBaseEndPoint(false) . 'charge', array(
+                 'timeout' => self::CONNECTION_TIMEOUT,
+                 'headers' => $headers,
+                 'body' => json_encode($body)
+             ));
 
-            if ($response->getStatusCode() == 200) {
-                $result = $response->json();
+             $this->debugLog('Charge - response status: ' . $response->getStatusCode());
 
-                if (isset($result['response']) && $result['response'] != 'null') {
+             if ($response->getStatusCode() == 200) {
+                 $result = $response->json();
 
-                    $xml = \simplexml_load_string($this->stripInvalidXml((string)$result['response']));
-                    $json = json_encode($xml);
-                    $data = json_decode($json, true);
+                 $this->debugLog('Charge - result: ' . json_encode($result));
 
-                    if (!isset($data['operations']['operation']['status'])) {
-                        return false;
-                    }
+                 if (isset($result['response']) && $result['response'] != 'null') {
 
-                    if ($data['operations']['operation']['status'] == 'ERROR' || $data['operations']['operation']['status'] == 'FAIL') {
-                        throw new \Exception($data['operations']['operation']['message']);
-                    }
+                     $xml = \simplexml_load_string($this->stripInvalidXml((string)$result['response']));
+                     $json = json_encode($xml);
+                     $data = json_decode($json, true);
 
-                    $redirectUrl = null;
-                    if (isset($data['operations']['operation']['redirectionResponse'])) {
-                        $redirectUrl = preg_replace('#^redirect?:#', $this->getCheckoutEndPoint(), $data['operations']['operation']['redirectionResponse']);
-                    }
+                     if (!isset($data['operations']['operation']['status'])) {
+                         return false;
+                     }
 
-                    return [
-                            'transactionResponse' => $data,
-                            'transactionId' => $merchantTransactionId,
-                            'status' => $data['operations']['operation']['status'],
-                            'epgCustomerId' => $customerId,
-                            'redirectURL' => $redirectUrl
-                        ];
-                }
-            }
+                     $this->debugLog('Charge - result status: ' . $data['operations']['operation']['status']);
 
-        } catch (RequestException $e) {
-            if ($e->hasResponse()) {
-                $error = json_decode($e->getResponse()->getBody(), true);
-                if (is_array($error)) {
-                    $error = implode('<br/>', $error);
-                }
-                throw new \Exception(isset($error['errorMessage'])?$error['errorMessage']:$error);
-            }
-        }
+                     if ($data['operations']['operation']['status'] == 'ERROR' || $data['operations']['operation']['status'] == 'FAIL') {
+                         throw new \Exception($data['operations']['operation']['message']);
+                     }
 
-        return false;
-    }
+                     $redirectUrl = null;
+                     if (isset($data['operations']['operation']['redirectionResponse'])) {
+                         $redirection = $data['operations']['operation']['redirectionResponse'];
+
+                         if (substr($redirection, 0, 13 ) === "redirect:http") {
+                             $redirectUrl = substr($redirection, 9);
+                         } else {
+                             $redirectUrl = preg_replace('#^redirect?:#', $this->getCheckoutEndPoint(), $redirection);
+                         }
+                     }
+
+                     return [
+                             'transactionResponse' => $data,
+                             'transactionId' => $merchantTransactionId,
+                             'status' => $data['operations']['operation']['status'],
+                             'epgCustomerId' => $customerId,
+                             'redirectURL' => $redirectUrl
+                         ];
+                 }
+             }
+
+         } catch (RequestException $e) {
+             $this->debugLog('Charge error: ' . $e->getMessage());
+             if ($e->hasResponse()) {
+                 $error = json_decode($e->getResponse()->getBody(), true);
+                 if (is_array($error)) {
+                     $error = implode('<br/>', $error);
+                 }
+                 $this->debugLog('Charge - response body: ' . $e->getResponse()->getBody());
+                 $this->debugLog('Charge - error: ' . isset($error['errorMessage'])?$error['errorMessage']:$error);
+                 throw new \Exception(isset($error['errorMessage'])?$error['errorMessage']:$error);
+             }
+         }
+
+         return false;
+     }
 
     /**
      *
@@ -419,5 +480,21 @@ class Api
             return substring(md5(uniqid()), 0, $length);
         }
         return substr(bin2hex($bytes), 0, $length);
+    }
+
+    private function debugLog($message = '', $level = 'debug')
+    {
+        $message = 'EPG API | ' . $message;
+        if ($level == 'critical') {
+            $this->_logger->critical($message);
+        } elseif ($level == 'error') {
+            $this->_logger->error($message);
+        } elseif ($level == 'warning') {
+            $this->_logger->warning($message);
+        } elseif ($level == 'info') {
+            $this->_logger->info($message);
+        } else {
+            $this->_logger->debug($message);
+        }
     }
 }
