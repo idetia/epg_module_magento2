@@ -76,7 +76,7 @@ final class ConfigProvider implements ConfigProviderInterface
                     'moduleImagesUrl' => $this->_assetRepo->getUrl('EPG_EasyPaymentGateway::images') . '/',
                     'months' => $this->getMonths(),
                     'years' => $this->getYears(),
-                    'accounts' => \Magento\Framework\App\ObjectManager::getInstance()->get('EPG\EasyPaymentGateway\Helper\Data')->getAccounts(),
+                    'cashier' => \Magento\Framework\App\ObjectManager::getInstance()->get('EPG\EasyPaymentGateway\Helper\Data')->apiCashier(),
                     'removeAccountUrl' =>  $this->_frameworkUrlInterface->getUrl('easypaymentgateway/payment/removeAccount', ['_secure' => $isSSL])
                 ]
             ]

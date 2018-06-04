@@ -11,7 +11,7 @@
       <div class="epg-form">
 
         <div class="logos">
-            <span class="label" data-bind="i18n: 'Pay with'"></span>
+            <span class="label" data-bind="i18n: 'Pay with'"></span> aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
             <span class="epg-logo" data-bind="visible: getEpgData().allowedCards.indexOf('visa') > -1"><img data-bind="attr:{src: getEpgData().moduleImagesUrl + 'visa.png'}" /></span>
             <span class="epg-logo" data-bind="visible: getEpgData().allowedCards.indexOf('master_card') > -1"><img data-bind="attr:{src: getEpgData().moduleImagesUrl + 'master_card.png'}" /></span>
             <span class="epg-logo" data-bind="visible: getEpgData().allowedCards.indexOf('maestro') > -1"><img data-bind="attr:{src: getEpgData().moduleImagesUrl + 'maestro.png'}" /></span>
@@ -19,13 +19,32 @@
         </div>
 
         <div class="block-form" data-bind="attr: {'data-disable-account-url': getEpgData().removeAccountUrl, 'data-confirm-disable-account': $t('Do you want disable this payment account?')}" id="payment-form" style="padding: 20px 0;">
+
+          <!-- ko if: getEpgData().cashier.paymentMethods != null && getEpgData().cashier.paymentMethods.length > 0 -->
+              <div class="selection payment-method">
+                  <select id="epgPaymentMethod" name="epg_payment_method">
+                      <option value="" data-bind="i18n: 'Select your payment method'"></option>
+                      <!-- ko foreach: getEpgData().cashier.paymentMethods -->
+                          <option value="<?php echo $paymentMethod['name'] ?>|<?php echo $paymentMethod['operation'] ?>"<?php if($paymentMethod['name']==$selectedPaymentMethod): ?> selected="selected"<?php endif ?>><?php echo $paymentMethod['name'] ?></option>
+                          <option data-bind="attr: {text: $data.name}"></option>
+                      <!-- /ko -->
+                  </select>
+              </div>
+          <!-- /ko -->
+          <!-- ko else -->
+              <div class="payment-method-alert" data-bind="i18n: 'Sorry, there are not any payment method available.'"></div>
+          <!-- /ko -->
+
           <form data-mage-init="{'validation': {}}" id="easypaymentgateway-form" class="form form-easypaymentgateway-order" data-role="easypaymentgateway-form">
            <fieldset class="fieldset payment method" data-bind="attr: {id: 'payment_form_' + getCode()}">
 
-          <div data-bind="visible: getEpgData().accounts != null && getEpgData().accounts.length > 0">
-              <div class="accounts-header"><span class="label" data-bind="i18n: 'Please, select a credit or debit card'"></span></div>
+          <div data-bind="visible: getEpgData().cashier.accounts != null && getEpgData().cashier.accounts.length > 0">
+              <div class="accounts-header">
+                <span class="label" data-bind="attr: {i18n: 'Please, select a credit or debit card', visible: true}"></span>
+                <span class="label" data-bind="attr: {i18n: 'Please, select an account', visible: flase }"></span>
+              </div>
               <ul class="accounts">
-                <!-- ko foreach: getEpgData().accounts -->
+                <!-- ko foreach: getEpgData().cashier.accounts -->
                  <li afterRender="$parent._EPGInitFunctions()">
                      <input data-bind="{attr: {id: 'account' + accountId, value: accountId, checked: $index() == 0 }, checked: $parent.creditCardAccount}" type="radio" name="payment[account]" />
                      <label data-bind="attr: {for: 'account' + accountId, 'data-account-id': accountId }" class="account">
