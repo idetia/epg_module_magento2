@@ -11,7 +11,7 @@
       <div class="epg-form">
 
         <div class="logos">
-            <span class="label" data-bind="i18n: 'Pay with'"></span> aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+            <span class="label" data-bind="i18n: 'Pay with'"></span>
             <span class="epg-logo" data-bind="visible: getEpgData().allowedCards.indexOf('visa') > -1"><img data-bind="attr:{src: getEpgData().moduleImagesUrl + 'visa.png'}" /></span>
             <span class="epg-logo" data-bind="visible: getEpgData().allowedCards.indexOf('master_card') > -1"><img data-bind="attr:{src: getEpgData().moduleImagesUrl + 'master_card.png'}" /></span>
             <span class="epg-logo" data-bind="visible: getEpgData().allowedCards.indexOf('maestro') > -1"><img data-bind="attr:{src: getEpgData().moduleImagesUrl + 'maestro.png'}" /></span>
@@ -25,8 +25,7 @@
                   <select id="epgPaymentMethod" name="epg_payment_method">
                       <option value="" data-bind="i18n: 'Select your payment method'"></option>
                       <!-- ko foreach: getEpgData().cashier.paymentMethods -->
-                          <option value="<?php echo $paymentMethod['name'] ?>|<?php echo $paymentMethod['operation'] ?>"<?php if($paymentMethod['name']==$selectedPaymentMethod): ?> selected="selected"<?php endif ?>><?php echo $paymentMethod['name'] ?></option>
-                          <option data-bind="attr: {text: $data.name}"></option>
+                          <option data-bind="attr: {value: ($data.name + '|' + $data.operation)}, text: $data.name"></option>
                       <!-- /ko -->
                   </select>
               </div>
