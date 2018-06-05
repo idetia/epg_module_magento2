@@ -84,14 +84,12 @@ class PaymentMethods extends AbstractPayment
       $form = new EPGForm($paymentMethod);
       $formHtml = $form->html();
 
-      $result = wc_get_template_html( 'payment-method-template.php', array(
-          'code' => 'easypaymentgateway',
+      $result = array(
           'accounts' => $accounts,
           'formHtml' => $formHtml,
-          'selectedPaymentMethod' => $methodInfo[0],
-          'icons' => $this->creditCardIcons(),
-      ), 'woocommerce/easypaymentgateway', WC_EPG_PLUGIN_PATH . '/templates/' );
+          'selectedPaymentMethod' => $methodInfo[0]
+      );
 
-      die($result);
+      die(json_encode($result));
   }
 }

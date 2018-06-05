@@ -95,11 +95,11 @@ class Form
             break;
       }
 
-      $label = '<label for="'.$item['name'].'">' . __($item['name'], 'woocommerce-gateway-epg') . ($item['required']?(' <abbr class="required" title="'. __('required', 'woocommerce-gateway-epg') . '">*</abbr>'):'') . '</label>';
+      $label = '<label for="'.$item['name'].'" class="label">' . __($item['name']) . '</label>';
       $result = '
-              <div class="row form-row form-row-wide '. ($item['required']?'validate-required':'') .'">
+              <div class="row form-row form-row-wide field '. ($item['required']?'required':'') .'">
                   ' . $label . '
-                  ' . $result . '
+                  <div class="input-box">' . $result . '</div>
               </div>';
 
       return $result;
@@ -191,7 +191,7 @@ class Form
 
           // Required
           if (!$item['info'] && $item['required'] && empty($field)) {
-              $result['errors'][] = '"' . __($item['name'], 'woocommerce-gateway-epg') . '" ' . __('is_required', 'woocommerce-gateway-epg');
+              $result['errors'][] = '"' . __($item['name']) . '" ' . __('is_required');
           }
 
           // Validators
@@ -219,37 +219,37 @@ class Form
             switch($validator['type']) {
                 case 'MIN_LENGTH':
                     if (strlen((string)$field) < (int)$validator['value']) {
-                        $errors[] = sprintf(__($validator['errorLabel'] . ' %1$s %2$s', 'woocommerce-gateway-epg'),
-                                            __($item['name'], 'woocommerce-gateway-epg'),
+                        $errors[] = sprintf(__($validator['errorLabel'] . ' %1$s %2$s'),
+                                            __($item['name']),
                                             $validator['errorParams'][0]
                                             );
                     }
                     break;
                 case 'MAX_LENGTH':
                     if (strlen((string)$field) > (int)$validator['value']) {
-                        $errors[] = sprintf(__($validator['errorLabel'] . ' %1$s %2$s', 'woocommerce-gateway-epg'),
-                                            __($item['name'], 'woocommerce-gateway-epg'),
+                        $errors[] = sprintf(__($validator['errorLabel'] . ' %1$s %2$s'),
+                                            __($item['name']),
                                             $validator['errorParams'][0]
                                             );
                     }
                     break;
                 case 'REGEX':
                     if (!@preg_match('/'.$validator['value'].'/', (string)$field)) {
-                        $errors[] = sprintf(__($validator['errorLabel'] . ' %1$s', 'woocommerce-gateway-epg'),
-                                            __($item['name'], 'woocommerce-gateway-epg')
+                        $errors[] = sprintf(__($validator['errorLabel'] . ' %1$s'),
+                                            __($item['name'])
                                             );
                     }
                     break;
                 case 'LUHN_CHECK':
                     if (empty(self::checkCard($field, true))) {
-                        $errors[] = sprintf(__('card_check %1$s', 'woocommerce-gateway-epg'),
-                                            __($item['name'], 'woocommerce-gateway-epg')
+                        $errors[] = sprintf(__('card_check %1$s'),
+                                            __($item['name'])
                                             );
                     }
                     break;
                 case 'EXPIRY_CHECK':
-                    $error = sprintf(__('date_expired %1$s', 'woocommerce-gateway-epg'),
-                                     __($item['name'], 'woocommerce-gateway-epg')
+                    $error = sprintf(__('date_expired %1$s'),
+                                     __($item['name'])
                                      );
 
                     if (strlen((string)$field) != 4) {

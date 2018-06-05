@@ -6,18 +6,14 @@ define(
         'Magento_Checkout/js/model/payment/additional-validators',
         'Magento_Checkout/js/action/redirect-on-success'
     ],
-    function (Component, $t, creditCardData, additionalValidators, redirectOnSuccessAction) {
+    function (Component, $t, paymentData, additionalValidators, redirectOnSuccessAction) {
         'use strict';
 
         return Component.extend({
             defaults: {
                 template: 'EPG_EasyPaymentGateway/payment/easypaymentgateway',
-                creditCardAccount: '',
-                creditCardHoldName: '',
-                creditCardNumber: '',
-                creditCardCvn: '',
-                creditCardExpMonth: '',
-                creditCardExpYear: '',
+                creditCardAccount: 0,
+                epgPaymentMethod: '',
             },
 
             /** @inheritdoc */
@@ -25,11 +21,7 @@ define(
                 this._super()
                     .observe([
                         'creditCardAccount',
-                        'creditCardHoldName',
-                        'creditCardNumber',
-                        'creditCardCvn',
-                        'creditCardExpMonth',
-                        'creditCardExpYear'
+                        'epgPaymentMethod'
                     ]);
 
                 return this;
@@ -43,31 +35,16 @@ define(
 
                 this._super();
 
-                creditCardData.expMonth = this.getEpgData().months[0];
-                creditCardData.expYear = this.getEpgData().years[0];
+                this.epgPaymentMethod.subscribe(function (value) {
+                    paymentData.epgPaymentMethod = value;
+
+                    if (value != '' && self.validate()) {
+                        self.isPlaceOrderActionAllowed(true);
+                    }
+                });
 
                 this.creditCardAccount.subscribe(function (value) {
-                    creditCardData.account = value;
-                });
-
-                this.creditCardHoldName.subscribe(function (value) {
-                    creditCardData.holdName = value;
-                });
-
-                this.creditCardNumber.subscribe(function (value) {
-                    creditCardData.cardNumber = value;
-                });
-
-                this.creditCardCvn.subscribe(function (value) {
-                    creditCardData.cardCvn = value;
-                });
-
-                this.creditCardExpMonth.subscribe(function (value) {
-                    creditCardData.expMonth = value;
-                });
-
-                this.creditCardExpYear.subscribe(function (value) {
-                    creditCardData.expYear = value;
+                    paymentData.account = value;
                 });
             },
 
@@ -79,12 +56,8 @@ define(
                 return {
                     'method': this.item.method,
                     'additional_data': {
-                        'account': creditCardData.account,
-                        'card_holder_name': creditCardData.holdName,
-                        'card_number': creditCardData.cardNumber,
-                        'card_cvn': creditCardData.cardCvn,
-                        'card_expiry_month': creditCardData.expMonth,
-                        'card_expiry_year': creditCardData.expYear,
+                        'epg_payment_method': paymentData.epgPaymentMethod,
+                        'account': paymentData.account
                     }
                 };
             },
@@ -117,6 +90,38 @@ define(
                   return;
                 }
 
+                // Payment methods
+                jQuery('.epg-form .epg-payment-methods select').unbind('change');
+                jQuery('.epg-form .epg-payment-methods select').on('change', function(event){
+                      //event.preventDefault();
+
+                      var blockForm = jQuery('.epg-form .block-form');
+                      var paymentMethodURL = blockForm.attr('data-payment-method-url');
+
+                      if (this.value != '') {
+
+                        jQuery('.payment-method-template', blockForm).html('<div class="epg-loading"></div>');
+
+                        jQuery.post({
+                            url: paymentMethodURL,
+                            cache: false,
+                            dataType: 'json',
+                            data: {
+                                method: this.value
+                            },
+                            success: function (data) {
+                                jQuery('.payment-method-template', blockForm).html('');
+                                jQuery('.payment-method-template', blockForm).append(jQuery('<fieldset class="fieldset payment method" id="payment_form_' + self.getCode() +'">' + data.formHtml + '</fieldset>'));
+                                self._EPGBindCheckEvents();
+                            }
+                        });
+                      } else {
+                        jQuery('.payment-method-template', blockForm).html('');
+                      }
+                });
+
+
+                /*
                 // Accounts management
                 jQuery('.epg-form .accounts input[type=radio]').unbind('click');
                 jQuery('.epg-form .accounts input[type=radio]').on('click', function(event){
@@ -148,31 +153,37 @@ define(
                         });
                     }
                 });
+                */
 
             },
 
-            _EPGCheckPayment: function(initial) {
+            _EPGCheckPayment: function() {
                 var radios = jQuery('.epg-form .accounts input[type=radio]');
+
                 radios.each(function(i, el){
                     var item = jQuery(el);
 
-                    if (initial && i == 0) {
-                      item.prop('checked', true);
-                    }
-
                     if (item.attr('value') == 0 && item.is(':checked')) {
-                        jQuery('.epg-form .field.card-holder-name, .epg-form .field.card-number, .epg-form .field.card-expiration').removeClass('hidden');
-                        jQuery('.epg-form .field.card-holder-name input, .epg-form .field.card-number input, .epg-form .field.card-expiration select').addClass('required-entry');
+                        jQuery('.epg-form .row.card-holder-name, .epg-form .row.card-number, .epg-form .row.card-expiration').removeClass('hidden');
+                        jQuery('.epg-form .row.card-holder-name, .epg-form .row.card-number, .epg-form .row.card-expiration').addClass('validate-required');
+                        jQuery('.epg-form .row.card-holder-name, .epg-form .row.card-number, .epg-form .row.card-expiration').removeClass('woocommerce-validated');
                     } else {
-                        jQuery('.epg-form .field.card-holder-name, .epg-form .field.card-number, .epg-form .field.card-expiration').addClass('hidden');
-                        jQuery('.epg-form .field.card-holder-name input, .epg-form .field.card-number input, .epg-form .field.card-expiration select').removeClass('required-entry');
+                        jQuery('.epg-form .row.card-holder-name, .epg-form .row.card-number, .epg-form .row.card-expiration').addClass('hidden');
+                        jQuery('.epg-form .row.card-holder-name, .epg-form .row.card-number, .epg-form .row.card-expiration').removeClass('validate-required');
                     }
-
-                    if (item.is(':checked')) {
-                      creditCardData.account = item.attr('value');
-                    }
-
                 });
+            },
+
+            _EPGBindCheckEvents: function() {
+              jQuery('.epg-form .accounts input[type=radio]').unbind('click');
+              jQuery('.epg-form .accounts input[type=radio]').on('click', function(event){
+                  this._EPGCheckPayment();
+                  this._EPGDisableAccount();
+              });
+
+              this._EPGCheckPayment();
+              this._EPGDisableAccount();
+              this._EPGSelectLastAccount();
             },
 
             _EPGSelectLastAccount: function() {
@@ -184,9 +195,38 @@ define(
 
                     if (i == radios.length - 1) {
                         item.prop('checked', true);
-                        self._EPGCheckPayment(false);
+                        self._EPGCheckPayment();
                     }
                 });
+            },
+
+            _EPGDisableAccount: function() {
+              jQuery('.epg-form .accounts .account .disable').unbind('click');
+              jQuery('.epg-form .accounts .account .disable').on('click', function(event){
+                  event.preventDefault();
+
+                  var self = this;
+                  var item = jQuery(event.currentTarget);
+                  var confirDisableAccount = jQuery('.epg-form .block-form').attr('data-confirm-disable-account');
+                  var disableAccountURL = jQuery('.epg-form .block-form').attr('data-disable-account-url');
+
+                  if(confirm(confirDisableAccount)) {
+                      jQuery.post({
+                          url: disableAccountURL,
+                          cache: false,
+                          dataType: 'json',
+                          data: {
+                              account_id: item.closest('.account').attr('data-account-id')
+                          },
+                          success: function (data) {
+                              if (data.result) {
+                                  item.closest('li').remove();
+                                  self._EPGSelectLastAccount();
+                              }
+                          }
+                      });
+                  }
+              });
             },
 
             getInfo: function() {

@@ -77,7 +77,8 @@ final class ConfigProvider implements ConfigProviderInterface
                     'months' => $this->getMonths(),
                     'years' => $this->getYears(),
                     'cashier' => \Magento\Framework\App\ObjectManager::getInstance()->get('EPG\EasyPaymentGateway\Helper\Data')->apiCashier(),
-                    'removeAccountUrl' =>  $this->_frameworkUrlInterface->getUrl('easypaymentgateway/payment/removeAccount', ['_secure' => $isSSL])
+                    'removeAccountUrl' =>  $this->_frameworkUrlInterface->getUrl('easypaymentgateway/payment/removeAccount', ['_secure' => $isSSL]),
+                    'paymentMethodsUrl' =>  $this->_frameworkUrlInterface->getUrl('easypaymentgateway/payment/paymentMethods', ['_secure' => $isSSL])                    
                 ]
             ]
         ];
