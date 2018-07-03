@@ -40,10 +40,12 @@ define(
 
                     if (value != '' && self.validate()) {
                         self.isPlaceOrderActionAllowed(true);
+                    } else {
+                        self.isPlaceOrderActionAllowed(false);
                     }
                 });
 
-                this.creditCardAccount.subscribe(function (value) {
+                this.epgPaymentMethod.subscribe(function (value) {
                     paymentData.account = value;
                 });
             },
@@ -83,6 +85,14 @@ define(
             },
 
             _EPGInitFunctions: function() {
+              var self = this;
+              setTimeout(function(){
+                self._EPGStarting();
+                console.log(self._super());
+              }, 5000);
+            },
+
+            _EPGStarting: function() {
 
                 var self = this;
 
@@ -110,6 +120,25 @@ define(
                                 method: this.value
                             },
                             success: function (data) {
+                                var fields = data.fields;
+                                var observables = [
+                                    'creditCardAccount',
+                                    'epgPaymentMethod'
+                                ];
+                                if (fields != null && fields.length > 0){
+                                  for(var field of fields) {
+                                    //self.defaults[field] = '';
+
+                                    observables.push(field);
+
+                                    self.epgPaymentMethod.subscribe(function (value) {
+                                        paymentData[field] = value;
+                                    });
+                                  }
+
+                                  self._super().observe(observables);
+                                }
+
                                 jQuery('.payment-method-template', blockForm).html('');
                                 jQuery('.payment-method-template', blockForm).append(jQuery('<fieldset class="fieldset payment method" id="payment_form_' + self.getCode() +'">' + data.formHtml + '</fieldset>'));
                                 self._EPGBindCheckEvents();

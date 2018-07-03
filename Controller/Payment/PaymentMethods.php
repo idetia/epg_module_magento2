@@ -82,11 +82,10 @@ class PaymentMethods extends AbstractPayment
       }
 
       $form = new EPGForm($paymentMethod);
-      $formHtml = $form->html();
-
       $result = array(
           'accounts' => $accounts,
-          'formHtml' => $formHtml,
+          'fields' => array_keys($form->fields([])),
+          'formHtml' => $form->html(),
           'selectedPaymentMethod' => $methodInfo[0]
       );
 
