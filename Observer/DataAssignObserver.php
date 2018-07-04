@@ -12,19 +12,6 @@ use Magento\Payment\Model\InfoInterface;
 
 class DataAssignObserver extends AbstractDataAssignObserver
 {
-
-    /**
-     * @var array
-     */
-    protected $additionalInformationList = [
-        'account',
-        'card_holder_name',
-        'card_number',
-        'card_cvn',
-        'card_expiry_month',
-        'card_expiry_year'
-    ];
-
     /**
      * @param Observer $observer
      * @return void
@@ -40,13 +27,11 @@ class DataAssignObserver extends AbstractDataAssignObserver
 
          $paymentInfo = $this->readPaymentModelArgument($observer);
 
-         foreach ($this->additionalInformationList as $additionalInformationKey) {
-             if (isset($additionalData[$additionalInformationKey])) {
-                 $paymentInfo->setAdditionalInformation(
-                     $additionalInformationKey,
-                     $additionalData[$additionalInformationKey]
-                 );
-             }
+         foreach ($additionalData as $key => $itemData) {
+           $paymentInfo->setAdditionalInformation(
+               $key,
+               $itemData
+           );
          }
      }
 }

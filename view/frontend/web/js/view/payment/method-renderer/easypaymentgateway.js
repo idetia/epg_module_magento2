@@ -1,19 +1,21 @@
 define(
     [
+        'ko',
+        'jquery',
         'Magento_Checkout/js/view/payment/default',
         'mage/translate',
-        'EPG_EasyPaymentGateway/js/model/credit-card-data',
+        'EPG_EasyPaymentGateway/js/model/epg-form-data',
         'Magento_Checkout/js/model/payment/additional-validators',
         'Magento_Checkout/js/action/redirect-on-success'
     ],
-    function (Component, $t, paymentData, additionalValidators, redirectOnSuccessAction) {
+    function (ko, $, Component, $t, paymentData, additionalValidators, redirectOnSuccessAction) {
         'use strict';
-
         return Component.extend({
             defaults: {
                 template: 'EPG_EasyPaymentGateway/payment/easypaymentgateway',
                 creditCardAccount: 0,
                 epgPaymentMethod: '',
+                epgFields: []
             },
 
             /** @inheritdoc */
@@ -45,9 +47,10 @@ define(
                     }
                 });
 
-                this.epgPaymentMethod.subscribe(function (value) {
+                this.creditCardAccount.subscribe(function (value) {
                     paymentData.account = value;
                 });
+
             },
 
             /**
@@ -55,13 +58,29 @@ define(
              * @returns {Object}
              */
             getData: function () {
-                return {
+                var data = {
                     'method': this.item.method,
-                    'additional_data': {
-                        'epg_payment_method': paymentData.epgPaymentMethod,
-                        'account': paymentData.account
-                    }
+                    'additional_data': {}
                 };
+                data['additional_data'] = this.getFieldsData();
+
+                return data;
+            },
+
+            getFieldsData(){
+                var result = {
+                  'epg_payment_method': paymentData.epgPaymentMethod,
+                  'payment_account': paymentData.account,
+                };
+
+                var fields = $("[id^='epgFields_']", $('.epg-form .block-form'));
+                if (fields.get(0)) {
+                    fields.each(function(i, el){
+                      result[$(el).attr('name')] = $(el).val();
+                    });
+                }
+
+                return result;
             },
 
             getCode: function() {
@@ -85,11 +104,7 @@ define(
             },
 
             _EPGInitFunctions: function() {
-              var self = this;
-              setTimeout(function(){
-                self._EPGStarting();
-                console.log(self._super());
-              }, 5000);
+              this._EPGStarting();
             },
 
             _EPGStarting: function() {
@@ -103,13 +118,13 @@ define(
                 // Payment methods
                 jQuery('.epg-form .epg-payment-methods select').unbind('change');
                 jQuery('.epg-form .epg-payment-methods select').on('change', function(event){
-                      //event.preventDefault();
 
                       var blockForm = jQuery('.epg-form .block-form');
                       var paymentMethodURL = blockForm.attr('data-payment-method-url');
 
                       if (this.value != '') {
 
+                        self.isPlaceOrderActionAllowed(true);
                         jQuery('.payment-method-template', blockForm).html('<div class="epg-loading"></div>');
 
                         jQuery.post({
@@ -121,31 +136,20 @@ define(
                             },
                             success: function (data) {
                                 var fields = data.fields;
-                                var observables = [
-                                    'creditCardAccount',
-                                    'epgPaymentMethod'
-                                ];
-                                if (fields != null && fields.length > 0){
-                                  for(var field of fields) {
-                                    //self.defaults[field] = '';
-
-                                    observables.push(field);
-
-                                    self.epgPaymentMethod.subscribe(function (value) {
-                                        paymentData[field] = value;
-                                    });
-                                  }
-
-                                  self._super().observe(observables);
-                                }
 
                                 jQuery('.payment-method-template', blockForm).html('');
                                 jQuery('.payment-method-template', blockForm).append(jQuery('<fieldset class="fieldset payment method" id="payment_form_' + self.getCode() +'">' + data.formHtml + '</fieldset>'));
+
+                                if (fields != null && fields.length > 0){
+                                  self.epgFields = fields;
+                                }
+
                                 self._EPGBindCheckEvents();
                             }
                         });
                       } else {
                         jQuery('.payment-method-template', blockForm).html('');
+                        self.isPlaceOrderActionAllowed(false);
                       }
                 });
 
@@ -266,8 +270,9 @@ define(
             },
 
             validate: function() {
-                var form = jQuery('#' + this.getCode() + '-form');
-                return form.validation() && form.validation('isValid');
+                //var form = jQuery('#' + this.getCode() + '-form');
+                //return form.validation() && form.validation('isValid');
+                return true;
             },
 
             // Override original placeOrder

@@ -25,6 +25,7 @@ use EPG\EasyPaymentGateway\Model\Api as EpgApi;
 use EPG\EasyPaymentGateway\Model\Order as EpgOrder;
 use EPG\EasyPaymentGateway\Model\Customer as EpgCustomer;
 use EPG\EasyPaymentGateway\Helper\Data as EpgHelper;
+use EPG\EasyPaymentGateway\Model\Form as EPGForm;
 use Magento\Store\Model\ScopeInterface;
 
 class Paymentmethod extends AbstractMethod {
@@ -352,78 +353,61 @@ class Paymentmethod extends AbstractMethod {
           throw new \Magento\Framework\Validator\Exception(__('This payment method is not available.'));
       }
 
+      // Check form fields
       $paymentInfo = $this->getInfoInstance();
-      if ($paymentInfo instanceof Payment) {
-          $billingCountry = $paymentInfo->getOrder()->getBillingAddress()->getCountryId();
-      } else {
-          $billingCountry = $paymentInfo->getQuote()->getBillingAddress()->getCountryId();
+      $data = $paymentInfo->getAdditionalInformation();
+
+      if (!isset($data['epg_payment_method']) || empty($data['epg_payment_method'])) {
+          throw new \Magento\Framework\Validator\Exception(__('Sorry, there are not any payment method selected.'));
+      }
+
+      // Call cashier
+      $cashierData = $this->_epgHelper->apiCashier();
+      if (empty($cashierData)) {
+          throw new \Magento\Framework\Validator\Exception(__('Sorry, there is a problem with the validations.'));
+      }
+
+      // Method selected info (name + operation)
+      $methodInfo = explode('|', $data['epg_payment_method']);
+      if (count($methodInfo) != 2) {
+          throw new \Magento\Framework\Validator\Exception(__('Sorry, there is a problem with the validations.'));
+      }
+
+      $paymentMethod = null;
+      foreach ($cashierData['paymentMethods'] as $method) {
+        if ($methodInfo[0] == $method['name']) {
+          $paymentMethod = $method;
+          break;
+        }
+      }
+
+      $account = null;
+      foreach ($cashierData['accounts'] as $itemAccount) {
+        if (strtolower($methodInfo[0]) != strtolower($itemAccount['paymentMethod'])) {
+            continue;
+        }
+
+        if ($data['payment_account'] == $itemAccount['accountId']) {
+            $account = $itemAccount;
+            break;
+        }
       }
 
       // Check form fields
-      $data = $paymentInfo->getAdditionalInformation();
-      if (empty($data['account']) || $data['account'] == "0") {
-          $cardNumber = isset($data['card_number'])?(string)$data['card_number']:null;
-          $expDateMonth = isset($data['card_expiry_month'])?(int)$data['card_expiry_month']:null;
-          $expDateYear = isset($data['card_expiry_year'])?(int)$data['card_expiry_year']:null;
-          $chName = isset($data['card_holder_name'])?(string)$data['card_holder_name']:null;
+      $form = new EPGForm($paymentMethod);
+      $formValidation = $form->validate($data, $account);
 
-          if (empty($cardNumber) || empty(self::checkCard($cardNumber, true))) {
-              $this->errors[] = __('The card number is not valid.');
+      if (!empty($formValidation['errors'])) {
+          foreach ($formValidation['errors'] as $error) {
+              $this->errors[] = $error;
           }
 
-          if (empty($expDateMonth) || !($expDateMonth>0 && $expDateMonth<13) || empty($expDateYear) || !($expDateYear>-1 && $expDateYear<100)) {
-              $this->errors[] = __('The card expiration date is not valid.');
-          }
-
-          if (empty($chName)) {
-              $this->errors[] = __('The card holder name is not valid.');
+          if (count($this->errors) > 0) {
+            throw new \Magento\Framework\Validator\Exception(__(implode("<br/>", $this->errors)));
           }
       }
 
-      $cvnNumber = isset($data['card_cvn'])?$data['card_cvn']:null;;
-      if (empty($cvnNumber) || strlen($cvnNumber) !== 3 || !is_numeric($cvnNumber)) {
-          $this->errors[] = __('The card cvn number is not valid.');
-      }
-
-      if (count($this->errors) > 0) {
-        throw new \Magento\Framework\Validator\Exception(__(implode("\n", $this->errors)));
-      }
-
-    return $this;
-  }
-
-  private static final function checkCard($number, $extraCheck = false){
-      $cards = array(
-          "visa" => "(4\d{12}(?:\d{3})?)",
-          "amex" => "(3[47]\d{13})",
-          "maestro" => "((?:5020|5038|6304|6579|6761)\d{12}(?:\d\d)?)",
-          "mastercard" => "(5[1-5]\d{14})"
-      );
-
-      $names = array("Visa", "American Express", "Maestro", "Mastercard");
-      $matches = array();
-      $pattern = "#^(?:".implode("|", $cards).")$#";
-      $result = preg_match($pattern, str_replace(" ", "", $number), $matches);
-
-      if($extraCheck && $result > 0){
-          $result = (self::luhnValidation($number))?1:0;
-      }
-
-      return ($result>0)?$names[sizeof($matches)-2]:false;
-  }
-
-  private static final function luhnValidation($number){
-      settype($number, 'string');
-      $number = preg_replace("/[^0-9]/", "", $number);
-      $numberChecksum= '';
-
-      $reversedNumberArray = str_split(strrev($number));
-      foreach ($reversedNumberArray as $i => $d) {
-          $numberChecksum.= (($i % 2) !== 0) ? (string)((int)$d * 2) : $d;
-      }
-
-      $sum = array_sum(str_split($numberChecksum));
-      return ($sum % 10) === 0;
+      return $this;
   }
 
 }

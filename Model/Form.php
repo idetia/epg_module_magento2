@@ -17,17 +17,17 @@ class Form
 
       $items = $this->paymentMethod['formTemplate']['items'];
 
-      foreach($items as $item) {
+      foreach($items as $key => $item) {
         if ($item['info']) {
           continue;
         }
-        $result .=  $this->buildField($item);
+        $result .=  $this->buildField($item, $key);
       }
 
       return $result;
     }
 
-    private function buildField($item)
+    private function buildField($item, $key = 0)
     {
       $result = '';
 
@@ -44,7 +44,7 @@ class Form
 
             // Select type
             if (isset($item['values']) && count($item['values']) > 1) {
-                $result .= '<select '. ($item['required']?'required':'') .' id="'.$item['name'].'" name="'.$item['name'].'" class="input-text '. $this->htmlClass($item) .'" '. $this->htmlValidators($item['validators']) .' >';
+                $result .= '<select '. ($item['required']?'required':'') .' id="epgFields_'.$item['name'].'" name="'.$item['name'].'" class="input-text '. $this->htmlClass($item) .'" '. $this->htmlValidators($item['validators']) .' >';
                 foreach ($item['values'] as $value) {
                     $result .= '<option value="'. $value . '">'. $value .'</option>';
                 }
@@ -52,7 +52,7 @@ class Form
 
             // Input type
             } else {
-                $result .= '<input type="'.$type.'" '. ($item['required']?'required':'') .' id="'.$item['name'].'" name="'.$item['name'].'" value="'.$item['defValue'].'" placeholder="'.$item['placeHolder'].'" class="input-text '. $this->htmlClass($item) .'" '. $this->htmlValidators($item['validators']) .' />';
+                $result .= '<input type="'.$type.'" '. ($item['required']?'required':'') .' id="epgFields_'.$item['name'].'" name="'.$item['name'].'" value="'.$item['defValue'].'" placeholder="'.$item['placeHolder'].'" class="input-text '. $this->htmlClass($item) .'" '. $this->htmlValidators($item['validators']) .' />';
             }
 
             if ($type == 'hidden') {
@@ -66,7 +66,7 @@ class Form
             $years = $this->getYears();
             $result .= '
                   <div class="v-fix selection '.$item['name'].'Month">
-                      <select '. ($item['required']?'required':'') .' id="'.$item['name'].'Month" name="'.$item['name'].'Month" class="month '. $this->htmlClass($item) .'">
+                      <select '. ($item['required']?'required':'') .' id="epgFields_'.$item['name'].'Month" name="'.$item['name'].'Month" class="month '. $this->htmlClass($item) .'">
                       ';
 
                       foreach ($months as $v) {
@@ -77,7 +77,7 @@ class Form
                       </select>
                   </div>
                   <div class="v-fix selection '.$item['name'].'Year">
-                      <select '. ($item['required']?'required':'') .' id="'.$item['name'].'Year" name="'.$item['name'].'Year" class="year '. $this->htmlClass($item) .'">
+                      <select '. ($item['required']?'required':'') .' id="epgFields_'.$item['name'].'Year" name="'.$item['name'].'Year" class="year '. $this->htmlClass($item) .'">
                       ';
 
                       foreach ($years as $v) {
@@ -91,11 +91,11 @@ class Form
 
             break;
           case 'RADIO':
-            $result .= '<input type="radio" '. ($item['checked']?'checked':'') .' id="'.$item['name'].'" name="'.$item['name'].'" value="'.$item['defValue'].'" class="input-radio '. $this->htmlClass($item) .'" '. ($this->htmlValidators($item['validators'])) .' /> ' . $item['defValue'];
+            $result .= '<input type="radio" '. ($item['checked']?'checked':'') .' id="epgFields_'.$item['name'].'" name="'.$item['name'].'" value="'.$item['defValue'].'" class="input-radio '. $this->htmlClass($item) .'" '. ($this->htmlValidators($item['validators'])) .' /> ' . $item['defValue'];
             break;
       }
 
-      $label = '<label for="'.$item['name'].'" class="label">' . __($item['name']) . '</label>';
+      $label = '<label for="epgFields_'.$item['name'].'" class="label">' . __($item['name']) . '</label>';
       $result = '
               <div class="row form-row form-row-wide field '. ($item['required']?'required':'') .'">
                   ' . $label . '
@@ -241,7 +241,7 @@ class Form
                     }
                     break;
                 case 'LUHN_CHECK':
-                    if (empty(self::checkCard($field, true))) {
+                    if (empty(self::luhnValidation($field))) {
                         $errors[] = sprintf(__('card_check %1$s'),
                                             __($item['name'])
                                             );
@@ -271,27 +271,6 @@ class Form
         }
 
         return $errors;
-    }
-
-    private static final function checkCard($number, $extraCheck = false)
-    {
-        $cards = array(
-            "visa" => "(4\d{12}(?:\d{3})?)",
-            "amex" => "(3[47]\d{13})",
-            "maestro" => "((?:5020|5038|6304|6579|6761)\d{12}(?:\d\d)?)",
-            "mastercard" => "(5[1-5]\d{14})"
-        );
-
-        $names = array("Visa", "American Express", "Maestro", "Mastercard");
-        $matches = array();
-        $pattern = "#^(?:".implode("|", $cards).")$#";
-        $result = preg_match($pattern, str_replace(" ", "", $number), $matches);
-
-        if($extraCheck && $result > 0){
-            $result = (self::luhnValidation($number))?1:0;
-        }
-
-        return ($result>0)?$names[sizeof($matches)-2]:false;
     }
 
     private static final function luhnValidation($number)
