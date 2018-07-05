@@ -23,13 +23,14 @@ class Api
     protected $_logger;
 
     public function __construct(ScopeConfigInterface $configScopeConfigInterface,
-        StoreManagerInterface $modelStoreManagerInterface,
-        \Psr\Log\LoggerInterface $logger)
+        StoreManagerInterface $modelStoreManagerInterface)
     {
         $this->_configScopeConfigInterface = $configScopeConfigInterface;
         $this->_modelStoreManagerInterface = $modelStoreManagerInterface;
-        $this->_logger = $logger;
 
+        $writer = new \Zend\Log\Writer\Stream(BP . '/var/log/epg_' . date('Ymd') . '.log');
+        $this->_logger = new \Zend\Log\Logger();
+        $this->_logger->addWriter($writer);
     }
 
     const BASE_ENDPOINT_SANDBOX_MEP = 'https://epgjs-mep-stg.easypaymentgateway.com/';
@@ -286,7 +287,7 @@ class Api
     /**
      * Charge
      */
-     public function charge($prepayToken, $customerId, $customer, $info, $total, $currency, $country, $language, $statusURL, $successURL, $errorURL, $cancelURL, $paymentSolution = 'CreditCards', $operationType = 'credit')
+     public function charge($prepayToken, $customerId, $customer, $address, $total, $currency, $country, $language, $statusURL, $successURL, $awaitingURL, $errorURL, $cancelURL, $paymentSolution = 'CreditCards', $operationType = 'credit')
      {
          $merchantTransactionId = $this->idGenerator();
          $client = new HttpClient(['verify' => false]);
@@ -300,26 +301,27 @@ class Api
 
              $body = array(
                      'amount' => number_format($total, 2),
-                     'description' => 'Payment from ' . get_option('blogname') . '.',
+                     'description' => 'Payment from ' . $this->_modelStoreManagerInterface->getStore()->getName() . '.',
                      'statusURL' => $statusURL,
                      'successURL' => $successURL,
+                     'awaitingURL' => $awaitingURL,
                      'errorURL' => $errorURL,
                      'cancelURL' => $cancelURL,
-                     'firstName' => $info['first_name'],
-                     'lastName' => $info['last_name'],
-                     'customerEmail' => $info['email'],
-                     'addressLine1' => $info['billing_address_1'],
-                     'addressLine2' => $info['billing_address_2'],
-                     'city' => $info['city'],
-                     'postCode' => $info['postcode'],
-                     'telephone' => $info['phone'],
-                     'customerCountry' => $info['country'],
-                     'customerCompanyName' => $info['company'],
+                     'firstName' => $address->getFirstname(),
+                     'lastName' => $address->getLastname(),
+                     'customerEmail' => $address->getEmail(),
+                     'addressLine1' => is_array($address->getStreet())?$address->getStreet()[0]:$address->getStreet(),
+                     'addressLine2' => '',
+                     'city' => $address->getCity(),
+                     'postCode' => $address->getPostcode(),
+                     'telephone' => $address->getTelephone(),
+                     'customerCountry' => $address->getCountryId(),
+                     'customerCompanyName' => $address->getCompany(),
 
                      'operationType'=> $operationType,
-                     'merchantId'=> trim($this->getOption('epg_merchant_id')),
-                     'merchantPassword'=> trim($this->getOption('epg_merchant_key')),
-                     'productId'=> trim($this->getOption('epg_product_id')),
+                     'merchantId'=> trim($this->_configScopeConfigInterface->getValue('payment/easypaymentgateway/epg_merchant_id', ScopeInterface::SCOPE_STORE)),
+                     'merchantPassword'=> trim($this->_configScopeConfigInterface->getValue('payment/easypaymentgateway/epg_merchant_key', ScopeInterface::SCOPE_STORE)),
+                     'productId'=> trim($this->_configScopeConfigInterface->getValue('payment/easypaymentgateway/epg_product_id', ScopeInterface::SCOPE_STORE)),
                      'country' => $country,
                      'currency' => $currency,
                      'paymentSolution'=> $paymentSolution,
@@ -484,6 +486,12 @@ class Api
 
     private function debugLog($message = '', $level = 'debug')
     {
+        $debug = $this->_configScopeConfigInterface->getValue('payment/easypaymentgateway/epg_debug', ScopeInterface::SCOPE_STORE) == '1';
+
+        if (!$debug) {
+          return;
+        }
+
         $message = 'EPG API | ' . $message;
         if ($level == 'critical') {
             $this->_logger->critical($message);

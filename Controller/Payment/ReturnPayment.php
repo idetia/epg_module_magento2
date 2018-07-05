@@ -125,9 +125,9 @@ class ReturnPayment extends AbstractPayment
         ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->setCartWasUpdated(true);
 
         // SUCCESS
-        if ($returnType == 'success') {
+        if ($returnType == 'success' || $returnType == 'awaiting') {
             try {
-              $this->createOrder($epg_order, json_decode($epg_order->getPaymentDetails(), true));
+              $this->createOrder($epg_order, json_decode($epg_order->getPaymentDetails(), true), $returnType);
 
               $this->_redirect('checkout/onepage/success', ['_secure'=> $isSSL]);
               return null;
@@ -166,7 +166,7 @@ class ReturnPayment extends AbstractPayment
             $transactionType = Transaction::TYPE_PAYMENT;
 
             // UC-01: EPG status is REDIRECTED && operation status is ERROR or VOIDED && order id is null
-            if ($epg_order->getPaymentStatus() == 'REDIRECTED' &&
+            if (($epg_order->getPaymentStatus() == 'REDIRECTED' || $epg_order->getPaymentStatus() == 'PENDING') &&
                 ($responseParams['o_status'] == 'ERROR' || $responseParams['o_status'] == 'VOIDED') &&
                 empty($orderId)
                 ) {
@@ -174,7 +174,7 @@ class ReturnPayment extends AbstractPayment
             }
 
             // UC-02: EPG status is REDIRECTED && operation status is SUCCESS|PENDING && order id is null
-            if ($epg_order->getPaymentStatus() == 'REDIRECTED' &&
+            if (($epg_order->getPaymentStatus() == 'REDIRECTED' || $epg_order->getPaymentStatus() == 'PENDING') &&
                 ($responseParams['o_status'] == 'SUCCESS' || $responseParams['o_status'] == 'PENDING') &&
                 empty($orderId)
                 ) {
@@ -256,7 +256,7 @@ class ReturnPayment extends AbstractPayment
     }
   }
 
-  private function createOrder($epg_order, $transactionResponse)
+  private function createOrder($epg_order, $transactionResponse, $returnType = null)
   {
     ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setReturnPayment(true);
 
@@ -270,6 +270,7 @@ class ReturnPayment extends AbstractPayment
     ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgChargeData(
       [
         'chargeResult' => [
+            'status' => $this->getTxnStatus($transactionResponse, $returnType),
             'transactionId' => $epg_order->getIdTransaction(),
             'transactionResponse' => $transactionResponse
         ],
@@ -278,5 +279,32 @@ class ReturnPayment extends AbstractPayment
     );
 
     $this->_typeOnepage->saveOrder();
+  }
+
+  private function getTxnStatus($transactionResponse, $returnType)
+  {
+      if (!empty($returnType) && $returnType == 'success') {
+          return 'SUCCESS';
+      }
+
+      if (isset($transactionResponse['o_status'])) {
+        return $transactionResponse['o_status'];
+      }
+
+      if (!isset($transactionResponse['operations']['operation'])) {
+          return 'ERROR';
+      }
+
+      if (is_array($transactionResponse['operations']['operation']) && isset($transactionResponse['operations']['operation']['status'])) {
+          $operation = $transactionResponse['operations']['operation'];
+      } else {
+          $operation = $transactionResponse['operations']['operation'][count($transactionResponse['operations']['operation']) - 1];
+      }
+
+      if (empty($operation) || (!empty($operation) && !isset($operation['status']))) {
+          return 'ERROR';
+      }
+
+      return $operation['status'];
   }
 }

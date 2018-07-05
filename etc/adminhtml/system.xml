@@ -12,10 +12,6 @@
           <label>Enabled</label>
           <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
         </field>
-        <field id="order_status" translate="label" sortOrder="3" type="select" showInDefault="1" showInWebsite="1">
-          <label>New order status</label>
-          <source_model>Magento\Sales\Model\Config\Source\Order\Status\NewStatus</source_model>
-        </field>
         <field id="allowspecific" translate="label" sortOrder="4" type="allowspecific" showInDefault="1" showInWebsite="1" showInStore="1">
           <label>Payment from applicable countries</label>
           <source_model>Magento\Payment\Model\Config\Source\Allspecificcountries</source_model>
@@ -29,6 +25,10 @@
         </field>
         <field id="epg_sandbox" translate="label" sortOrder="7" type="select" showInDefault="1" showInWebsite="1" showInStore="1">
           <label>Test Mode</label>
+          <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+        </field>
+        <field id="epg_debug" translate="label" sortOrder="7" type="select" showInDefault="1" showInWebsite="1" showInStore="1">
+          <label>Enable Debug</label>
           <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
         </field>
         <field id="epg_merchant_id" translate="label" sortOrder="8" type="text" showInDefault="1" showInWebsite="1">

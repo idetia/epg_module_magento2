@@ -137,14 +137,14 @@ class Paymentmethod extends AbstractMethod {
            $returnUrl = $this->_urlInterface->getUrl('easypaymentgateway/payment/returnPayment', ['_secure'=>$isSSL]);
            $prepayToken = ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->getEpgPrepaymentToken();
            $epgCustomerId = ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->getEpgCustomerId();
+           $paymentMethodInfo = ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->getEpgPaymentMethodInfo();
            $uniqId = uniqid();
 
-           if (empty($prepayToken) || empty($epgCustomerId)) {
-               throw new \Exception(__("There was an error trying to process this credit card.\nPlease, try to introduce your credit card data again."));
+           if (empty($prepayToken) || empty($epgCustomerId) || empty($paymentMethodInfo)) {
+               throw new \Exception(__("There was an error trying to process this payment.\nPlease, try to introduce your payment data again."));
            }
 
            $chargeResult = $this->_epgApi->charge(
-                   $cartId,
                    $prepayToken,
                    $epgCustomerId,
                    null,
@@ -155,8 +155,11 @@ class Paymentmethod extends AbstractMethod {
                    strtoupper(substr($this->_scopeConfig->getValue('general/locale/code', ScopeInterface::SCOPE_STORE),0,2)),
                    $returnUrl . '?_=status|' . $cartId . '|' . md5($prepayToken . $uniqId . 'success'),
                    $returnUrl . '?_=success|' . $cartId . '|' . md5($prepayToken . $uniqId . 'success'),
+                   $returnUrl . '?_=awaiting|' . $cartId . '|' . md5($prepayToken . $uniqId . 'success'),
                    $returnUrl . '?_=error|' . $cartId . '|' . md5($prepayToken . $uniqId . 'error'),
-                   $returnUrl . '?_=cancel|' . $cartId . '|' . md5($prepayToken . $uniqId . 'cancel')
+                   $returnUrl . '?_=cancel|' . $cartId . '|' . md5($prepayToken . $uniqId . 'cancel'),
+                   $paymentMethodInfo[0],
+                   $paymentMethodInfo[1]
                    );
 
            if (empty($chargeResult)) {
@@ -167,13 +170,14 @@ class Paymentmethod extends AbstractMethod {
            ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgPrepaymentToken(null);
            ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgCustomerId(null);
 
-           $errors = __('Charge fails:') . ' ' . $e->getMessage();
+           $errors = __('Charge fails.') . ' ' . $e->getMessage();
            throw new \Exception($errors);
            return false;
        }
 
        ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgPrepaymentToken(null);
        ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgCustomerId(null);
+       ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgPaymentMethodInfo(null);
 
        // Load epg order
        $epg_order = $this->_epgOrder->loadByAttributes([
@@ -205,7 +209,6 @@ class Paymentmethod extends AbstractMethod {
        } else {
            switch($chargeResult['status']) {
                case 'SUCCESS':
-               case 'PENDING':
                    $this->_checkoutSession->setEpgChargeData(
                      [
                        'chargeResult' => $chargeResult,
@@ -213,11 +216,32 @@ class Paymentmethod extends AbstractMethod {
                      ]
                    );
                    return true;
+
+               case 'PENDING':
+               case 'VOIDED':
+               case 'REBATED':
+               case 'TO_CAPTURE':
+               case 'AWATING_PAYSOL':
+                   // If redirect (there are some exceptions when the redirection could be in a PENDING status)
+                   if (isset($chargeResult['redirectURL']) && !empty($chargeResult['redirectURL'])) {
+                     $cart->setIsActive(0)->save();
+                     ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->clearQuote();
+                     throw new \Exception(json_encode(['redirectURL' => $chargeResult['redirectURL']]));
+                   }
+
+                   $this->_checkoutSession->setEpgChargeData(
+                     [
+                       'chargeResult' => $chargeResult,
+                       'epgOrder' => $epg_order
+                     ]
+                   );
+                   return true;
+
                case 'ERROR':
                case 'FAIL':
                case 'CANCELED':
                default:
-                   $errors = __('Charge fails. Please, try to send your payment data again.');
+                   $errors = __('Charge fails.');
                    throw new \Exception($errors);
                    return false;
            }
@@ -235,24 +259,65 @@ class Paymentmethod extends AbstractMethod {
      }
 
      if (!isset($apiData['prepayToken'])) {
-         throw new \Exception("There was an error trying to process this credit card.\nPlease, try it again.");
+         throw new \Exception("Prepay token fails: Prepay token process returned null.");
      }
 
      $this->_checkoutSession->setEpgPrepaymentToken($apiData['prepayToken']);
      $this->_checkoutSession->setEpgCustomerId($apiData['epgCustomerId']);
      $this->_checkoutSession->setEpgPaymentInfo($apiData['account']);
+     $this->_checkoutSession->setEpgPaymentMethodInfo($apiData['paymentMethodInfo']);
 
      return $this;
    }
 
    private function getApiData() {
        $prepayToken = null;
+       $paymentInfo = $this->getInfoInstance();
+       $data = $paymentInfo->getAdditionalInformation();
+
+       // Payment method selected
+       $pMethod = (isset($data['epg_payment_method'])?(string)$data['epg_payment_method']:null);
+       if (empty($pMethod)) {
+           throw new \Exception(__('Sorry, there are not any payment method selected.'));
+       }
+
+       // Call cashier
+       $cashier = $this->_epgHelper->apiCashier();
+
+       // Method selected info (name + operation)
+       $methodInfo = explode('|', $pMethod);
+       if (count($methodInfo) != 2) {
+           throw new \Exception(__('Sorry, payment method is not right.'));
+       }
+
+       $paymentMethod = null;
+       foreach ($cashier['paymentMethods'] as $method) {
+         if ($methodInfo[0] == $method['name']) {
+           $paymentMethod = $method;
+           break;
+         }
+       }
+
+       // Account
+       $account = null;
+       foreach ($cashier['accounts'] as $itemAccount) {
+         if (strtolower($methodInfo[0]) != strtolower($itemAccount['paymentMethod'])) {
+             continue;
+         }
+
+         if ($data['payment_account'] == $itemAccount['accountId']) {
+             $account = $itemAccount;
+             break;
+         }
+       }
+
+       $form = new EPGForm($paymentMethod);
        $customerData = $this->_customerSession->getCustomer();
        $epgCustomer = $this->_epgCustomer->getByCustomerId($customerData->getId());
        if (!empty($epgCustomer)) {
            $epgCustomerId = $epgCustomer->getEpgCustomerId();
        } else {
-           $epgCustomerId = $customerData->getId() . '-' . md5(microtime());
+           $epgCustomerId = $this->_epgApi->idGenerator($customerData->getId() . '-');
        }
 
        // Authentication
@@ -260,30 +325,22 @@ class Paymentmethod extends AbstractMethod {
            $authToken = $this->_epgApi->authentication(
                $epgCustomerId,
                strtoupper($this->_modelStoreManagerInterface->getStore()->getCurrentCurrencyCode()),
-               strtoupper($this->_scopeConfig->getValue('general/country/default'))
+               strtoupper($this->_scopeConfig->getValue('general/country/default')),
+               $methodInfo[1]
            );
            if (empty($authToken)) {
-               throw new \Exception("Get authToken fails: Authentication returned null");
+               throw new \Exception(__("Get authToken fails: Authentication returned null"));
            }
        } catch(\Exception $e) {
-           throw new \Exception(__("Get authToken fails") . ": " . $e->getMessage());
+           throw new \Exception(__("Get authToken fails.") . " " . $e->getMessage());
        }
 
        // Register account
-       $paymentInfo = $this->getInfoInstance();
-       $data = $paymentInfo->getAdditionalInformation();
-       $account = [];
-       $accountId = $data['account'];
-       $cardCvn = $data['card_cvn'];
-       if (empty($accountId) || $accountId == "0") {
+       if (empty($accountId)) {
            try{
-               $account = $this->_epgApi->registerAccount($authToken, [
-                   'card_number' => $data['card_number'],
-                   'card_expiry_month' => $data['card_expiry_month'],
-                   'card_expiry_year' => $data['card_expiry_year'],
-                   'card_holder_name' => $data['card_holder_name'],
-                   'card_cvn' => $cardCvn
-               ]);
+               $fields = $form->fields($data);
+               $account = $this->_epgApi->registerAccount($authToken, $fields, strtolower($methodInfo[0]));
+
                if (empty($account)) {
                    throw new \Exception(__("Registration account fails: Registration returned null"));
                }
@@ -293,23 +350,22 @@ class Paymentmethod extends AbstractMethod {
                    if (empty($epgCustomer)) {
                        $epgCustomer = $this->_epgCustomer->create($customerData->getId(), $epgCustomerId);
                    }
-                   $epgCustomer->addAccount($account);
                }
            } catch(\Exception $e) {
-               throw new \Exception(__("Registration account fails") . ": " . $e->getMessage());
+               throw new \Exception(__("Registration account fails.") . " " . $e->getMessage());
            }
-       } else {
-           $account = $this->_epgHelper->getAccountById($accountId);
        }
 
        // Prepay
        try{
-           $prepayToken = $this->_epgApi->prepayToken($authToken, $account['accountId'], ['card_cvn' => $cardCvn]);
+           $fields = $form->fields($data, $account);
+           $prepayToken = $this->_epgApi->prepayToken($authToken, $account['accountId'], $fields);
+
            if (empty($prepayToken)) {
                throw new \Exception("Prepay token fails: Prepay token process returned null");
            }
        } catch(\Exception $e) {
-           throw new \Exception(__("Prepay token fails") . ": " . $e->getMessage());
+           throw new \Exception(__("Prepay token fails.") . " " . $e->getMessage());
        }
 
        // Create EPG order
@@ -317,6 +373,7 @@ class Paymentmethod extends AbstractMethod {
        $billingAddress = $cart->getBillingAddress();
        $totals = $cart->collectTotals();
        $cartId = $billingAddress->getQuoteId();
+
        $epg_order = $this->_epgOrder->loadByAttributes([
          'id_cart' => $cartId,
          'epg_customer_id' => $epgCustomerId
@@ -340,7 +397,8 @@ class Paymentmethod extends AbstractMethod {
        return [
            'prepayToken' => $prepayToken,
            'account' => $account,
-           'epgCustomerId' => $epgCustomerId
+           'epgCustomerId' => $epgCustomerId,
+           'paymentMethodInfo' => $methodInfo
          ];
    }
 

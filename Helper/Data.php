@@ -81,12 +81,12 @@ class Data extends AbstractHelper
     public function apiCashier()
     {
         $customerData = $this->_customerSession->getCustomer();
-		$epgCustomer = $this->getEpgCustomer();
+		    $epgCustomer = $this->getEpgCustomer();
 
         if (!empty($epgCustomer)) {
             $epgCustomerId = $epgCustomer->getEpgCustomerId();
         } else {
-            $epgCustomerId = $customerData->getId() . '-' . md5(microtime());
+            $epgCustomerId = $this->_epgApi->idGenerator($customerData->getId() . '-');
         }
 
         // Authentication
