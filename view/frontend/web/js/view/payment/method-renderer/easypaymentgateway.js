@@ -70,7 +70,7 @@ define(
             getFieldsData(){
                 var result = {
                   'epg_payment_method': paymentData.epgPaymentMethod,
-                  'payment_account': paymentData.account,
+                  'payment_account': $(".epg-form [name='payment_account']:checked").val(),
                 };
 
                 var fields = $("[id^='epgFields_']", $('.epg-form .block-form'));
@@ -135,14 +135,8 @@ define(
                                 method: this.value
                             },
                             success: function (data) {
-                                var fields = data.fields;
-
                                 jQuery('.payment-method-template', blockForm).html('');
-                                jQuery('.payment-method-template', blockForm).append(jQuery('<fieldset class="fieldset payment method" id="payment_form_' + self.getCode() +'">' + data.formHtml + '</fieldset>'));
-
-                                if (fields != null && fields.length > 0){
-                                  self.epgFields = fields;
-                                }
+                                jQuery('.payment-method-template', blockForm).append(jQuery('<fieldset class="fieldset payment method" id="payment_form_' + self.getCode() +'">' + data.html + '</fieldset>'));
 
                                 self._EPGBindCheckEvents();
                             }
@@ -152,42 +146,6 @@ define(
                         self.isPlaceOrderActionAllowed(false);
                       }
                 });
-
-
-                /*
-                // Accounts management
-                jQuery('.epg-form .accounts input[type=radio]').unbind('click');
-                jQuery('.epg-form .accounts input[type=radio]').on('click', function(event){
-                    self._EPGCheckPayment(false);
-                });
-                self._EPGCheckPayment(true);
-
-                // Disable account
-                jQuery('.epg-form .accounts .account .disable').unbind('click');
-                jQuery('.epg-form .accounts .account .disable').on('click', function(event){
-                    event.preventDefault();
-
-                    var item = jQuery(event.currentTarget);
-
-                    if(confirm(jQuery('.epg-form .block-form').attr('data-confirm-disable-account'))) {
-                        jQuery.post({
-                            url: jQuery('.epg-form .block-form').attr('data-disable-account-url'),
-                            cache: false,
-                            dataType: 'json',
-                            data: {
-                                account_id: item.closest('.account').attr('data-account-id')
-                            },
-                            success: function (data) {
-                                if (data.result) {
-                                    item.closest('li').remove();
-                                    self._EPGSelectLastAccount();
-                                }
-                            }
-                        });
-                    }
-                });
-                */
-
             },
 
             _EPGCheckPayment: function() {
@@ -197,21 +155,29 @@ define(
                     var item = jQuery(el);
 
                     if (item.attr('value') == 0 && item.is(':checked')) {
-                        jQuery('.epg-form .row.card-holder-name, .epg-form .row.card-number, .epg-form .row.card-expiration').removeClass('hidden');
-                        jQuery('.epg-form .row.card-holder-name, .epg-form .row.card-number, .epg-form .row.card-expiration').addClass('validate-required');
-                        jQuery('.epg-form .row.card-holder-name, .epg-form .row.card-number, .epg-form .row.card-expiration').removeClass('woocommerce-validated');
+                        var row = jQuery('.epg-form .form-row');
+                        row.removeClass('hidden');
+
+                        jQuery('input, select', row).each(function(j, ele) {
+                            if(jQuery(ele).prop('required')) {
+                                row.addClass('required');
+                            }
+                        });
+
                     } else {
-                        jQuery('.epg-form .row.card-holder-name, .epg-form .row.card-number, .epg-form .row.card-expiration').addClass('hidden');
-                        jQuery('.epg-form .row.card-holder-name, .epg-form .row.card-number, .epg-form .row.card-expiration').removeClass('validate-required');
+                        var row = jQuery('.epg-form .form-row .is-internal').closest('.form-row');
+                        row.addClass('hidden');
+                        row.removeClass('required');
                     }
                 });
             },
 
             _EPGBindCheckEvents: function() {
+              var self = this;
               jQuery('.epg-form .accounts input[type=radio]').unbind('click');
               jQuery('.epg-form .accounts input[type=radio]').on('click', function(event){
-                  this._EPGCheckPayment();
-                  this._EPGDisableAccount();
+                  self._EPGCheckPayment();
+                  self._EPGDisableAccount();
               });
 
               this._EPGCheckPayment();
@@ -234,11 +200,12 @@ define(
             },
 
             _EPGDisableAccount: function() {
+              var self = this;
+
               jQuery('.epg-form .accounts .account .disable').unbind('click');
               jQuery('.epg-form .accounts .account .disable').on('click', function(event){
                   event.preventDefault();
 
-                  var self = this;
                   var item = jQuery(event.currentTarget);
                   var confirDisableAccount = jQuery('.epg-form .block-form').attr('data-confirm-disable-account');
                   var disableAccountURL = jQuery('.epg-form .block-form').attr('data-disable-account-url');

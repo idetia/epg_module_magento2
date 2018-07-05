@@ -169,6 +169,8 @@ class Paymentmethod extends AbstractMethod {
        } catch(\Exception $e) {
            ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgPrepaymentToken(null);
            ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgCustomerId(null);
+           ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgPaymentInfo(null);
+           ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgPaymentMethodInfo(null);
 
            $errors = __('Charge fails.') . ' ' . $e->getMessage();
            throw new \Exception($errors);
@@ -177,6 +179,7 @@ class Paymentmethod extends AbstractMethod {
 
        ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgPrepaymentToken(null);
        ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgCustomerId(null);
+       ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgPaymentInfo(null);
        ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgPaymentMethodInfo(null);
 
        // Load epg order
@@ -336,7 +339,7 @@ class Paymentmethod extends AbstractMethod {
        }
 
        // Register account
-       if (empty($accountId)) {
+       if (empty($account)) {
            try{
                $fields = $form->fields($data);
                $account = $this->_epgApi->registerAccount($authToken, $fields, strtolower($methodInfo[0]));

@@ -11,6 +11,7 @@
         <can_use_checkout>1</can_use_checkout>
         <payment_action>authorize_capture</payment_action>
         <epg_sandbox>1</epg_sandbox>
+        <epg_debug>1</epg_debug>
       </easypaymentgateway>
     </payment>
   </default>

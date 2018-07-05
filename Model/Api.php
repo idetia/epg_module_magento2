@@ -215,8 +215,6 @@ class Api
                  'headers' => $headers,
              ));
 
-             $this->debugLog('Disable account response: ' . print_r($error, true));
-
              $result = null;
              if ($response->getStatusCode() == 200) {
                  $result = $response->json();

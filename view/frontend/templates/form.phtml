@@ -1,0 +1,62 @@
+<?php if (strtolower($this->selectedPaymentMethod) == 'creditcards') {?>
+    <?php echo $this->icons; ?>
+<?php } ?>
+
+<?php if (!empty($this->accounts)){ ?>
+     <div class="accounts-header">
+         <?php if (strtolower($this->selectedPaymentMethod) == 'creditcards') {?>
+             <strong><?php echo __('Select card', 'easypaymentgateway')?></strong>
+         <?php } else { ?>
+             <strong><?php echo __('Select account', 'easypaymentgateway')?></strong>
+         <?php } ?>
+     </div>
+     <ul class="accounts">
+        <?php
+            foreach($this->accounts as $key => $account) {
+        ?>
+            <li>
+                <input id="account<?php echo $account['accountId']?>" type="radio" name="payment_account" value="<?php echo $account['accountId'] ?>" <?php if ($key == 0){ ?>checked<?php } ?>/>
+                <label for="account<?php echo $account['accountId']?>" class="account" data-account-id="<?php echo $account['accountId']?>">
+                    <?php if ($account['paymentMethod'] == 'creditcards') { ?>
+                        <?php
+                            $accountInfo=[];
+                            foreach ($account['values'] as $value) {
+                                $accountInfo[$value['name']] = $value['value'];
+                            }
+                        ?>
+                        <span class="account-field card-type">
+                            <strong><?php echo __('Card type', 'easypaymentgateway')?></strong> <?php echo $accountInfo['cardType']?>
+                        </span>
+                        <span class="account-field card-masked">
+                            <strong><?php echo __('Card number', 'easypaymentgateway')?></strong> <?php echo $accountInfo['maskedCardNumber']?>
+                        </span>
+                    <?php } else { ?>
+                        <?php foreach($account['values'] as $value) { ?>
+                            <span class="account-field">
+                                <strong><?php echo __($value['name'], 'easypaymentgateway')?></strong> <?php echo $value['value']?>
+                            </span>
+                        <?php }?>
+                    <?php } ?>
+                    <span class="disable"></span>
+                </label>
+            </li>
+        <?php } ?>
+
+        <li>
+            <input id="account0" type="radio" name="payment_account" value="0" />
+            <label for="account0" class="account new-card" data-account-id="">
+                <span class="card-type">
+                    <?php if (strtolower($this->selectedPaymentMethod) == 'creditcards') {?>
+                        <strong><?php echo __('New card', 'easypaymentgateway')?></strong>
+                    <?php } else { ?>
+                        <strong><?php echo __('New account', 'easypaymentgateway')?></strong>
+                    <?php } ?>
+                </span>
+            </label>
+        </li>
+     </ul>
+<?php } ?>
+
+<div class="new-account-separator"></div>
+
+<?php echo $this->formHtml; ?>

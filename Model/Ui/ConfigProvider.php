@@ -70,41 +70,13 @@ final class ConfigProvider implements ConfigProviderInterface
         return [
             'payment' => [
                 self::CODE => [
-                    'allowedCards' => explode(',', $this->_configScopeConfigInterface->getValue('payment/easypaymentgateway/epg_channels', ScopeInterface::SCOPE_STORE)),
                     'isSandbox' => $isSandbox,
                     'isSSL' => $isSSL,
-                    'moduleImagesUrl' => $this->_assetRepo->getUrl('EPG_EasyPaymentGateway::images') . '/',
-                    'months' => $this->getMonths(),
-                    'years' => $this->getYears(),
                     'cashier' => \Magento\Framework\App\ObjectManager::getInstance()->get('EPG\EasyPaymentGateway\Helper\Data')->apiCashier(),
                     'removeAccountUrl' =>  $this->_frameworkUrlInterface->getUrl('easypaymentgateway/payment/removeAccount', ['_secure' => $isSSL]),
-                    'paymentMethodsUrl' =>  $this->_frameworkUrlInterface->getUrl('easypaymentgateway/payment/paymentMethods', ['_secure' => $isSSL])                    
+                    'paymentMethodsUrl' =>  $this->_frameworkUrlInterface->getUrl('easypaymentgateway/payment/paymentMethods', ['_secure' => $isSSL])
                 ]
             ]
         ];
-    }
-
-    /**
-     * Retrieve credit card expire months
-     *
-     * @return array
-     */
-    public function getMonths()
-    {
-        $months = [];
-        for ($i = 1; $i <= 12; $i++) {
-            $months[] = sprintf("%02d", $i);
-        }
-        return $months;
-    }
-
-    /**
-     * Retrieve credit card expire years
-     *
-     * @return array
-     */
-    public function getYears()
-    {
-        return range(date('y'), date('y') + 10);
     }
 }

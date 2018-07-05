@@ -55,7 +55,15 @@ class Info extends BlockInfo
                   $epgOrder = $this->_modelOrderFactory->create()->getByOrderId($order->getId());
 
                   if (!empty($epgOrder) && !empty($epgOrder->getIdEpgOrder())) {
-                      $account = $this->_helperData->getAccountById($epgOrder->getIdAccount());
+                      // Call cashier
+                      $cashier = $this->_helperData->apiCashier();
+                      $account = null;
+                      foreach ($cashier['accounts'] as $itemAccount) {
+                        if ($epgOrder->getIdAccount() == $itemAccount['accountId']) {
+                            $account = $itemAccount;
+                            break;
+                        }
+                      }
                   }
               }
           }
@@ -65,8 +73,14 @@ class Info extends BlockInfo
                   $accountInfo[$value['name']] = $value['value'];
               }
 
-              $data[(string)__('Card type')] = isset($accountInfo['cardType'])?$accountInfo['cardType']:'';
-              $data[(string)__('Card number')] = isset($accountInfo['maskedCardNumber'])?$accountInfo['maskedCardNumber']:'';
+              if (isset($account['paymentMethod'])) {
+                  $data[(string)__('Payment Method')] = $account['paymentMethod'];
+              }
+
+              if (isset($accountInfo['cardType']) && isset($accountInfo['maskedCardNumber'])) {
+                $data[(string)__('Card type')] = isset($accountInfo['cardType'])?$accountInfo['cardType']:'';
+                $data[(string)__('Card number')] = isset($accountInfo['maskedCardNumber'])?$accountInfo['maskedCardNumber']:'';
+              }
           }
 
           $transport->setData(array_merge($data, $transport->getData()));

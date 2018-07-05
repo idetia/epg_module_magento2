@@ -38,7 +38,7 @@ class RemoveAccount extends AbstractPayment
         ScopeConfigInterface $configScopeConfigInterface)
     {
         parent::__construct($context);
-              
+
         $this->_modelApiFactory = $modelApiFactory;
         $this->_helperData = $helperData;
         $this->_modelStoreManagerInterface = $modelStoreManagerInterface;
@@ -71,20 +71,17 @@ class RemoveAccount extends AbstractPayment
       try{
           $accountId = (isset($_POST['account_id'])?(string)$_POST['account_id']:null);
 
-          if (empty($accountId) || !$epgCustomer->checkAccount($accountId)) {
+          if (empty($accountId)) {
               die(json_encode(['result' => false]));
           }
 
           $account = $epgApi->disableAccount($authToken, $accountId);
+
           if (empty($account)) {
               die(json_encode(['result' => false]));
           }
 
-          if ($epgCustomer->removeAccount($accountId)) {
-              die(json_encode(['result' => true]));
-          }
-
-          die(json_encode(['result' => false]));
+          die(json_encode(['result' => true]));
 
       } catch(\Exception $e) {
           die(json_encode(['result' => false]));

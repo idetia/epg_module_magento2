@@ -12,6 +12,23 @@
     display: none;
 }
 
+.epg-form .epg-icons{
+  display: inline-block;
+  margin: 2px auto;
+  width: 100%;
+  text-align: center;
+  padding: 6px 0;
+}
+
+.epg-form .epg-icons img.icon{
+  margin: 2px;
+  display: inline-block;
+  float: none !important;
+}
+.epg-form .logos{
+    padding: 12px 0 12px;
+}
+
 .epg-form .logos{
     padding: 12px 0 12px;
 }
