@@ -77,7 +77,7 @@ class Api
             $response = $client->post( $this->getBaseEndPoint(false) . 'auth', [
                 'timeout' => self::CONNECTION_TIMEOUT,
                 'headers' => $headers,
-                'body' => json_encode($body)
+                'body' => empty($body)?'{}':json_encode($body)
             ]);
 
             if ($response->getStatusCode() == 200) {
@@ -88,7 +88,7 @@ class Api
             }
 
         } catch (RequestException $e) {
-            $this->debugLog('Authentication error: ' . $e->getMessage());
+            $this->debugLog('Authentication error: ' . $e->getMessage(), 'error');
             if ($e->hasResponse()) {
                 $error = json_decode($e->getResponse()->getBody(), true);
                 $error = isset($error['errorMessage'])?$error['errorMessage']:$error;
@@ -130,7 +130,7 @@ class Api
             }
 
         } catch (RequestException $e) {
-            $this->debugLog('Cashier error: ' . $e->getMessage());
+            $this->debugLog('Cashier error: ' . $e->getMessage(), 'error');
             if ($e->hasResponse()) {
                 $error = json_decode($e->getResponse()->getBody(), true);
                 $error = isset($error['errorMessage'])?$error['errorMessage']:$error;
@@ -164,7 +164,7 @@ class Api
              $response = $client->post( $this->getBaseEndPoint() . 'account/' . $method, array(
                  'timeout' => self::CONNECTION_TIMEOUT,
                  'headers' => $headers,
-                 'body' => json_encode($body)
+                 'body' => empty($body)?'{}':json_encode($body)
              ));
 
              $this->debugLog('Register account - response status: ' . $response->getStatusCode());
@@ -181,12 +181,11 @@ class Api
              }
 
          } catch (RequestException $e) {
-             $this->debugLog('Register account error: ' . $e->getMessage());
+             $this->debugLog('Register account error: ' . $e->getMessage(), 'error');
              if ($e->hasResponse()) {
                  $error = json_decode($e->getResponse()->getBody(), true);
                  $error = isset($error['errorMessage'])?$error['errorMessage']:$error;
                  $error = isset($error['message'])?$error['message']:$error;
-
                  throw new \Exception(print_r($error, true));
              }
          }
@@ -208,7 +207,7 @@ class Api
                      'authToken' => $authToken
                      );
 
- 			$this->debugLog('Disable account: ' . $accountId);
+ 			       $this->debugLog('Disable account: ' . $accountId);
 
              $response = $client->post( $this->getBaseEndPoint() . 'account/disable/' . $accountId, array(
                  'timeout' => self::CONNECTION_TIMEOUT,
@@ -225,7 +224,7 @@ class Api
              }
 
          } catch (RequestException $e) {
-             $this->debugLog('Disable account error: ' . $e->getMessage());
+             $this->debugLog('Disable account error: ' . $e->getMessage(), 'error');
              if ($e->hasResponse()) {
                  $error = json_decode($e->getResponse()->getBody(), true);
                  $error = isset($error['errorMessage'])?$error['errorMessage']:$error;
@@ -253,12 +252,13 @@ class Api
 
              $body = $fields;
 
- 			$this->debugLog('Prepay token');
+ 			       $this->debugLog('Prepay token');
+             $this->debugLog('Prepay token request body: ' . json_encode($fields));
 
              $response = $client->post( $this->getBaseEndPoint() . 'prepay/' . $accountId, array(
                  'timeout' => self::CONNECTION_TIMEOUT,
                  'headers' => $headers,
-                 'body' => json_encode($body)
+                 'body' => empty($body)?'{}':json_encode($body)
              ));
 
              $result = null;
@@ -270,7 +270,7 @@ class Api
              }
 
          } catch (RequestException $e) {
-             $this->debugLog('Prepay token error: ' . $e->getMessage());
+             $this->debugLog('Prepay token error: ' . $e->getMessage(), 'error');
              if ($e->hasResponse()) {
                  $error = json_decode($e->getResponse()->getBody(), true);
                  $error = isset($error['errorMessage'])?$error['errorMessage']:$error;
@@ -334,7 +334,7 @@ class Api
              $response = $client->post( $this->getBaseEndPoint(false) . 'charge', array(
                  'timeout' => self::CONNECTION_TIMEOUT,
                  'headers' => $headers,
-                 'body' => json_encode($body)
+                 'body' => empty($body)?'{}':json_encode($body)
              ));
 
              $this->debugLog('Charge - response status: ' . $response->getStatusCode());
@@ -350,19 +350,29 @@ class Api
                      $json = json_encode($xml);
                      $data = json_decode($json, true);
 
-                     if (!isset($data['operations']['operation']['status'])) {
-                         return false;
+                     if (!isset($data['operations']['operation'])) {
+                         throw new \Exception('There are not found "operations > operation" field.');
                      }
 
-                     $this->debugLog('Charge - result status: ' . $data['operations']['operation']['status']);
+                     if (is_array($data['operations']['operation']) && isset($data['operations']['operation']['status'])) {
+                         $operation = $data['operations']['operation'];
+                     } else {
+                         $operation = $data['operations']['operation'][count($data['operations']['operation']) - 1];
+                     }
 
-                     if ($data['operations']['operation']['status'] == 'ERROR' || $data['operations']['operation']['status'] == 'FAIL') {
-                         throw new \Exception($data['operations']['operation']['message']);
+                     if (empty($operation) || (!empty($operation) && !isset($operation['status']))) {
+                         throw new \Exception('There are not found "status" field.');
+                     }
+
+                     $this->debugLog('Charge - result status: ' . $operation['status']);
+
+                     if ($operation['status'] == 'ERROR' || $operation['status'] == 'FAIL') {
+                         throw new \Exception($operation['message']);
                      }
 
                      $redirectUrl = null;
-                     if (isset($data['operations']['operation']['redirectionResponse'])) {
-                         $redirection = $data['operations']['operation']['redirectionResponse'];
+                     if (isset($operation['redirectionResponse'])) {
+                         $redirection = $operation['redirectionResponse'];
 
                          if (substr($redirection, 0, 13 ) === "redirect:http") {
                              $redirectUrl = substr($redirection, 9);
@@ -374,7 +384,7 @@ class Api
                      return [
                              'transactionResponse' => $data,
                              'transactionId' => $merchantTransactionId,
-                             'status' => $data['operations']['operation']['status'],
+                             'status' => $operation['status'],
                              'epgCustomerId' => $customerId,
                              'redirectURL' => $redirectUrl
                          ];
@@ -382,14 +392,14 @@ class Api
              }
 
          } catch (RequestException $e) {
-             $this->debugLog('Charge error: ' . $e->getMessage());
+             $this->debugLog('Charge error: ' . $e->getMessage(), 'error');
              if ($e->hasResponse()) {
                  $error = json_decode($e->getResponse()->getBody(), true);
                  if (is_array($error)) {
                      $error = implode('<br/>', $error);
                  }
-                 $this->debugLog('Charge - response body: ' . $e->getResponse()->getBody());
-                 $this->debugLog('Charge - error: ' . isset($error['errorMessage'])?$error['errorMessage']:$error);
+                 $this->debugLog('Charge - response body: ' . $e->getResponse()->getBody(), 'error');
+                 $this->debugLog('Charge - error: ' . isset($error['errorMessage'])?$error['errorMessage']:$error, 'error');
                  throw new \Exception(isset($error['errorMessage'])?$error['errorMessage']:$error);
              }
          }
@@ -471,15 +481,15 @@ class Api
         return $ret;
     }
 
-    private function idGenerator($length = 10) {
+    public function idGenerator($prefix = '', $length = 10) {
         if (function_exists("random_bytes")) {
             $bytes = random_bytes(ceil($length / 2));
         } elseif (function_exists("openssl_random_pseudo_bytes")) {
             $bytes = openssl_random_pseudo_bytes(ceil($length / 2));
         } else {
-            return substring(md5(uniqid()), 0, $length);
+            return $prefix . substring(md5(uniqid()), 0, $length);
         }
-        return substr(bin2hex($bytes), 0, $length);
+        return $prefix . substr(bin2hex($bytes), 0, $length);
     }
 
     private function debugLog($message = '', $level = 'debug')
