@@ -1,40 +1,61 @@
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
+/**
+ * @api
+ */
 define([
+    'ko',
     'jquery',
     'uiComponent',
-    'underscore',
-    'Magento_Customer/js/customer-data',
-    'jquery/jquery-storageapi'
-], function ($, Component, _, customerData) {
+    '../model/messageList'
+], function (ko, $, Component, globalMessages) {
     'use strict';
 
     return Component.extend({
         defaults: {
-            cookieMessages: [],
+            template: 'Magento_Ui/messages',
             selector: '[data-role=checkout-messages]',
             isHidden: false,
             listens: {
                 isHidden: 'onHiddenChange'
-            },            
-            messages: []
+            }
         },
 
         /** @inheritdoc */
-        initialize: function () {
-            this._super();
+        initialize: function (config, messageContainer) {
+            this._super()
+                .initObservable();
 
-            this.cookieMessages = $.cookieStorage.get('mage-messages');
-            this.messages = customerData.get('messages').extend({
-                disposableCustomerData: 'messages'
-            });
+            this.messageContainer = messageContainer || config.messageContainer || globalMessages;
 
-            if (!_.isEmpty(this.messages().messages)) {
-                customerData.set('messages', {});
-            }
+            return this;
+        },
 
-            $.cookieStorage.set('mage-messages', '');
-            setTimeout(function() {
-                $(".messages").hide('blind', {}, 500)
-            }, 30000);
+        /** @inheritdoc */
+        initObservable: function () {
+            this._super()
+                .observe('isHidden');
+
+            return this;
+        },
+
+        /**
+         * Checks visibility.
+         *
+         * @return {Boolean}
+         */
+        isVisible: function () {
+            return this.isHidden(this.messageContainer.hasMessages());
+        },
+
+        /**
+         * Remove all messages.
+         */
+        removeAll: function () {
+            this.messageContainer.clear();
         },
 
         /**
@@ -47,7 +68,7 @@ define([
             if (isHidden) {
                 setTimeout(function () {
                     $(self.selector).hide('blind', {}, 500);
-                }, 30000);
+                }, 60000);
             }
         }
     });
