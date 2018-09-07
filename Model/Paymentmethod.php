@@ -153,11 +153,11 @@ class Paymentmethod extends AbstractMethod {
                    strtoupper($totals->getQuoteCurrencyCode()),
                    strtoupper($this->_scopeConfig->getValue('general/country/default', ScopeInterface::SCOPE_STORE)),
                    strtoupper(substr($this->_scopeConfig->getValue('general/locale/code', ScopeInterface::SCOPE_STORE),0,2)),
-                   $returnUrl . '?_=status|' . $cartId . '|' . md5($prepayToken . $uniqId . 'success'),
-                   $returnUrl . '?_=success|' . $cartId . '|' . md5($prepayToken . $uniqId . 'success'),
-                   $returnUrl . '?_=awaiting|' . $cartId . '|' . md5($prepayToken . $uniqId . 'success'),
-                   $returnUrl . '?_=error|' . $cartId . '|' . md5($prepayToken . $uniqId . 'error'),
-                   $returnUrl . '?_=cancel|' . $cartId . '|' . md5($prepayToken . $uniqId . 'cancel'),
+                   $returnUrl . '?_=status,' . $cartId . ',' . md5($prepayToken . $uniqId . 'success'),
+                   $returnUrl . '?_=success,' . $cartId . ',' . md5($prepayToken . $uniqId . 'success'),
+                   $returnUrl . '?_=awaiting,' . $cartId . ',' . md5($prepayToken . $uniqId . 'success'),
+                   $returnUrl . '?_=error,' . $cartId . ',' . md5($prepayToken . $uniqId . 'error'),
+                   $returnUrl . '?_=cancel,' . $cartId . ',' . md5($prepayToken . $uniqId . 'cancel'),
                    $paymentMethodInfo[0],
                    $paymentMethodInfo[1]
                    );
@@ -172,7 +172,7 @@ class Paymentmethod extends AbstractMethod {
            ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgPaymentInfo(null);
            ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->setEpgPaymentMethodInfo(null);
 
-           $errors = __('Charge fails.') . ' ' . $e->getMessage();
+           $errors = __('Charge fails.');
            throw new \Exception($errors);
            return false;
        }

@@ -86,7 +86,7 @@ class ReturnPayment extends AbstractPayment
         $isSSL = ($this->_modelStoreManagerInterface->getStore()->isFrontUrlSecure() && $this->_appRequestInterface->isSecure());
         $errors = [];
         $params = $this->_appRequestInterface->getParam('_');
-        $paramsArray = explode('|', $params);
+        $paramsArray = explode(',', $params);
 
         if (empty($paramsArray) || count($paramsArray) != 3) {
             $errors[] = __('The order does not exists.');
@@ -124,7 +124,7 @@ class ReturnPayment extends AbstractPayment
         ObjectManager::getInstance()->get('Magento\Checkout\Model\Session')->replaceQuote($quote);
         ObjectManager::getInstance()->get('Magento\Customer\Model\Session')->setCartWasUpdated(true);
 
-        // SUCCESS
+        // SUCCESS OR AWAITING
         if ($returnType == 'success' || $returnType == 'awaiting') {
             try {
               $this->createOrder($epg_order, json_decode($epg_order->getPaymentDetails(), true), $returnType);
