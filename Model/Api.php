@@ -81,7 +81,7 @@ class Api
             ]);
 
             if ($response->getStatusCode() == 200) {
-                $result = $response->json();
+                $result = json_decode($response->getBody(), true);
                 if (isset($result['authToken'])) {
                     return $result['authToken'];
                 }
@@ -119,11 +119,11 @@ class Api
             $response = $client->get( $this->getBaseEndPoint() . 'cashier', array(
                 'timeout' => self::CONNECTION_TIMEOUT,
                 'headers' => $headers,
-                'body' => array()
+                'form_params' => array()
             ));
 
             if ($response->getStatusCode() == 200) {
-                $result = $response->json();
+                $result = json_decode($response->getBody(), true);
                 if (isset($result['paymentMethods'])) {
                     return $result;
                 }
@@ -171,7 +171,7 @@ class Api
 
              $result = null;
              if ($response->getStatusCode() == 200) {
-                 $result = $response->json();
+                 $result = json_decode($response->getBody(), true);
 
                  $this->debugLog('Register account - result: ' . json_encode($result));
 
@@ -216,7 +216,7 @@ class Api
 
              $result = null;
              if ($response->getStatusCode() == 200) {
-                 $result = $response->json();
+                 $result = json_decode($response->getBody(), true);
                  $this->debugLog('Disable account response: ' . json_encode($result));
                  if (isset($result['accountId'])) {
                      return $result;
@@ -263,7 +263,7 @@ class Api
 
              $result = null;
              if ($response->getStatusCode() == 200) {
-                 $result = $response->json();
+                 $result = json_decode($response->getBody(), true);
                  if (isset($result['prepayToken'])) {
                      return $result['prepayToken'];
                  }
@@ -340,7 +340,7 @@ class Api
              $this->debugLog('Charge - response status: ' . $response->getStatusCode());
 
              if ($response->getStatusCode() == 200) {
-                 $result = $response->json();
+                 $result = json_decode($response->getBody(), true);
 
                  $this->debugLog('Charge - result: ' . json_encode($result));
 
@@ -502,11 +502,11 @@ class Api
 
         $message = 'EPG API | ' . $message;
         if ($level == 'critical') {
-            $this->_logger->critical($message);
+            $this->_logger->crit($message);
         } elseif ($level == 'error') {
-            $this->_logger->error($message);
+            $this->_logger->err($message);
         } elseif ($level == 'warning') {
-            $this->_logger->warning($message);
+            $this->_logger->warn($message);
         } elseif ($level == 'info') {
             $this->_logger->info($message);
         } else {
