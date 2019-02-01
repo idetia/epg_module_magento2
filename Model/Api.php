@@ -298,7 +298,7 @@ class Api
                      );
 
              $body = array(
-                     'amount' => number_format($total, 2),
+                     'amount' => number_format($total, 2, '.', ''),
                      'description' => 'Payment from ' . $this->_modelStoreManagerInterface->getStore()->getName() . '.',
                      'statusURL' => $statusURL,
                      'successURL' => $successURL,
