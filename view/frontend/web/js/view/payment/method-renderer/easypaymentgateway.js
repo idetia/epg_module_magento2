@@ -139,9 +139,16 @@ define(
                                 jQuery('.payment-method-template', blockForm).append(jQuery('<fieldset class="fieldset payment method" id="payment_form_' + self.getCode() +'">' + data.html + '</fieldset>'));
 
                                 self._EPGBindCheckEvents();
+
+                                if (jQuery('.new-account input[type=text], .new-account select, .new-account input[type=password], .new-account input[type=radio]', blockForm).get(0)) {
+                                  blockForm.addClass('has-inputs');
+                                } else {
+                                  blockForm.removeClass('has-inputs');
+                                }
                             }
                         });
                       } else {
+                        blockForm.removeClass('has-inputs');
                         jQuery('.payment-method-template', blockForm).html('');
                         self.isPlaceOrderActionAllowed(false);
                       }
